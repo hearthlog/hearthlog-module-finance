@@ -1,0 +1,46 @@
+{
+  "manifestVersion": 1,
+  "id": "org.stor.finance",
+  "package": "@hearthlog/module-finance",
+  "version": "1.0.0",
+  "compatibility": { "moduleApi": 1 },
+  "features": [
+    {
+      "id": "finance",
+      "path": "/finance",
+      "label": "Finance",
+      "subtitle": "Monthly transactions, forecast, and assets",
+      "keywords": "money transactions forecast assets wallet",
+      "navGroup": "Money",
+      "icon": "chart-line",
+      "navOrder": 10,
+      "mobilePrimary": true,
+      "mobileOrder": 2,
+      "children": [
+        { "id": "transactions", "label": "Transactions", "href": "/finance", "tab": null },
+        { "id": "budget", "label": "Budget plans", "href": "/finance?tab=budget", "tab": "budget" }
+      ],
+      "shortcuts": [
+        { "id": "add-transaction", "label": "Add transaction", "subtitle": "Open the Finance transaction drawer", "keywords": "new transaction income expense money", "query": "?newTransaction=1" }
+      ]
+    }
+  ],
+  "layouts": [
+    { "path": "/finance", "page": "./src/pages/layout.svelte", "load": "./src/pages/layout.ts" }
+  ],
+  "routes": [
+    { "path": "/finance", "page": "./src/pages/index.svelte", "load": "./src/pages/index.ts", "fitsScreen": true, "resolvesTo": "/finance/[year]/[month]" },
+    { "path": "/finance/[year]/[month]", "page": "./src/pages/month.svelte", "load": "./src/pages/month.ts", "fitsScreen": true, "keepMounted": true }
+  ],
+  "calendarIcons": ["cash-clock"],
+  "data": {
+    "definitions": "./src/data/definitions.ts",
+    "repositories": "./src/data/repositories.ts"
+  },
+  "projectionVersion": 1,
+  "aiCapabilities": ["category-pick"],
+  "attention": "./src/attention.ts",
+  "server": { "entry": "./src/server/index.ts" },
+  "refreshKeys": ["app:transactions", "app:assets", "app:budgets"],
+  "styles": "./src/styles.css"
+}

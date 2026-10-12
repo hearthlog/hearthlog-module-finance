@@ -1,0 +1,12 @@
+/* Finance's recipes: the Today card link and the phone list's running balance. Imported by the host's stylesheet. */
+
+@layer components {
+    a > .stor-today-card { transition: transform 160ms ease, box-shadow 160ms ease; }
+    a > .stor-today-card:hover { transform: translateY(-1px); box-shadow: var(--stor-shadow-md); }
+}
+
+@media (max-width: 767px) {
+    /* Lists show their figures only when asked: the running balance, the balance line, month figures. */
+    [data-phone-balance="off"] [data-balance], [data-phone-balance="off"] [data-river] { display: none; }
+    [data-phone-balance="off"] [data-timeline-scroll] { --river: 0px !important; }
+}
