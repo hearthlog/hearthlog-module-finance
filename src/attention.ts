@@ -31,8 +31,15 @@ export function planReminders(days: readonly PlannedDay[]): AttentionReminder[] 
     });
 }
 
-/** Plans waiting for a decision remind on their day. */
+/** Plans waiting for a decision remind on their day; the sidebar shows what is available now. */
 export const attention: AttentionContribution = {
+    async figures({ today }) {
+        const outlook = await queryDatabase((repositories) => repositories.timeline.getOutlook({ today }));
+        // Nothing recorded yet: no figure rather than a zero.
+        if (outlook.available === 0) return [];
+        const money = formatMoney(outlook.available, { decimals: 'never' });
+        return [{ id: 'finance', text: money, label: `${money} available now` }];
+    },
     async reminders({ today }) {
         const days = await queryDatabase((repositories) =>
             repositories.plannedDays.plannedDays(format(today, DAY), format(addDays(today, PLAN_HORIZON_DAYS), DAY), PLAN_HORIZON_DAYS + 1));
