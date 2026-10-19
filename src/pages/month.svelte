@@ -15,7 +15,7 @@
     import { events } from "@hearthlog/sdk/runtime";
     import { notify } from "@hearthlog/sdk/runtime";
     import { saveBalanceFloor } from "../finance/floor.js";
-    import { clampMonth, monthBounds, monthWindow, outlookDomain, parseShow, showsKind, type TimelineKind, type TimelineShow } from "../finance/timeline.js";
+    import { clampMonth, monthBounds, monthWindow, parseShow, showsKind, type TimelineKind, type TimelineShow } from "../finance/timeline.js";
     import { queryDatabase } from "@hearthlog/sdk/data";
     import { monthKeyOf, shiftMonthKey } from "@hearthlog/sdk/axis";
     import { PageHeader } from "@hearthlog/sdk/ui";
@@ -193,12 +193,6 @@
         { id: "done", label: "Done" },
     ];
 
-    // ---------------------------------------------------------------- one fixed scale
-    const domain = $derived.by<[number, number]>(() => {
-        const available = view.outlook.available;
-        return outlookDomain(Math.min(view.range.min, available), Math.max(view.range.max, available), floor);
-    });
-
     function changeFloor(value: number): void {
         floor = value;
         floorTouched = true;
@@ -353,6 +347,26 @@
             status: row.kind === "done" ? "archived" : "active",
             direction: row.amount >= 0 ? "income" : "expense",
         });
+    }
+
+    // ---------------------------------------------------------------- filter counts
+    /** Plans and done rows of the month in view, counted in SQL, shown on the filter. */
+    let kindCounts = $state({ planned: 0, done: 0 });
+
+    $effect(() => {
+        const key = visibleMonth;
+        void revision;
+        if (!key || !shown || isBudgetTab) return;
+        let current = true;
+        const { start, end } = monthWindow(key);
+        void queryDatabase((repositories) => repositories.transactions.countKindsInMonth(start, end, today))
+            .then((counts) => { if (current) kindCounts = counts; })
+            .catch(() => undefined);
+        return () => { current = false; };
+    });
+
+    function filterCount(id: TimelineShow): number | null {
+        return id === "planned" ? kindCounts.planned : id === "done" ? kindCounts.done : null;
     }
 
     // ---------------------------------------------------------------- sort uncategorized
@@ -672,7 +686,7 @@
                             aria-current={show === option.id ? "page" : undefined}
                             data-state={show === option.id ? "active" : undefined}
                             data-sveltekit-reset="false"
-                        >{option.label}</a>
+                        >{option.label}{#if filterCount(option.id) !== null}<span class="stor-tab-count ml-1.5">{filterCount(option.id)}</span>{/if}</a>
                     {/each}
                 </nav>
                 {#if uncategorized > 0}
@@ -798,7 +812,6 @@
                                     anchor={openingDay}
                                     show={show}
                                     bounds={bounds}
-                                    domain={domain}
                                     floor={floor}
                                     available={view.outlook.available}
                                     selectedIds={selectedIds}
@@ -857,14 +870,14 @@
                     data-state={show === option.id ? "active" : undefined}
                     data-sveltekit-reset="false"
                     onclick={() => (optionsOpen = false)}
-                >{option.label}</a>
+                >{option.label}{#if filterCount(option.id) !== null}<span class="stor-tab-count ml-1.5">{filterCount(option.id)}</span>{/if}</a>
             {/each}
         </nav>
         <div class="mt-2 flex flex-col divide-y divide-[color-mix(in_srgb,var(--stor-border)_62%,transparent)]">
             <button type="button" class="flex min-h-16 items-center gap-3 text-left" role="switch" aria-checked={phoneBalance} onclick={togglePhoneBalance}>
                 <span class="min-w-0 flex-1">
                     <span class="block text-[15px] font-medium text-[var(--stor-ink)]">Running balance</span>
-                    <span class="block text-[12.5px] text-[var(--stor-muted-text)]">The balance after each plan, the balance line and each month's figures</span>
+                    <span class="block text-[12.5px] text-[var(--stor-muted-text)]">The balance after each plan and each month's figures</span>
                 </span>
                 <span class="relative h-[30px] w-12 shrink-0 rounded-full transition-colors {phoneBalance ? 'bg-[var(--stor-action)]' : 'bg-[var(--stor-surface-well)] shadow-[inset_0_0_0_1px_var(--stor-border)]'}" aria-hidden="true">
                     <span class="absolute top-[3px] h-6 w-6 rounded-full bg-white shadow transition-[left] {phoneBalance ? 'left-[21px]' : 'left-[3px]'}"></span>

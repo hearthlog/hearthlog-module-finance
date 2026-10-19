@@ -412,6 +412,25 @@ export function createTransactionRepository(session: ReadModelSession) {
             return toNumber(result?.count);
         },
 
+        /** How many rows of the month are plans and how many are done, by the timeline's rule: archived or dated before today is done. */
+        async countKindsInMonth(start: string, end: string, today: string): Promise<{ planned: number; done: number }> {
+            const done = sql<boolean>`(transaction_status = 'archived' OR substr(trim(due_date), 1, 10) < ${today})`;
+            const result = await withTimeout(
+                session.selectFrom('transactions')
+                    .select(({ fn }) => [
+                        fn.countAll().as('total'),
+                        sql<number>`COALESCE(SUM(CASE WHEN ${done} THEN 1 ELSE 0 END), 0)`.as('done'),
+                    ])
+                    .where(sql<boolean>`substr(trim(due_date), 1, 10) BETWEEN ${start} AND ${end}`)
+                    .executeTakeFirst(),
+                DB_TIMEOUT_MS,
+                'Transaction count timed out',
+            );
+            const total = toNumber(result?.total);
+            const finished = toNumber(result?.done);
+            return { planned: total - finished, done: finished };
+        },
+
         /** The categories used most on or after a day for one direction, most used first (phone category chips). */
         async getTopCategories(since: string, direction: 'income' | 'expense', limit = 4): Promise<string[]> {
             const rows = await withTimeout(

@@ -4,7 +4,7 @@
     import type { TimelineOutlook } from "../../data/finance-timeline.js";
     import { parseFloor } from "../../finance/floor.js";
     import { formatAmount } from "@hearthlog/sdk/format";
-    import { Amount } from "@hearthlog/sdk/ui";
+    import { Metric } from "@hearthlog/sdk/ui";
     import { DataValue } from "@hearthlog/sdk/ui";
     import AssetView from "./AssetView.svelte";
     import IconChevronDown from "~icons/mdi/chevron-down";
@@ -56,53 +56,46 @@
     }
 </script>
 
-<!-- Phones show the two numbers that decide the month; opening Available now adds the rest and the assets. -->
-<section class="stor-panel readout shrink-0" class:open={assetsOpen || sheet} class:sheet aria-label="Outlook">
-    <div class="cell">
-        <button type="button" class="cell-button" aria-expanded={assetsOpen} aria-controls="finance-current-assets" onclick={() => (assetsOpen = !assetsOpen)}>
-            <span class="label">Available now<IconChevronDown class="phone-only h-3.5 w-3.5 shrink-0 transition-transform {assetsOpen ? 'rotate-180' : ''}" /></span>
-            <span class="value"><DataValue><Amount value={outlook.available} /></DataValue></span>
-            <span class="sub">
-                <span class="truncate">{assetNames || "Add current assets"}</span>
-                <IconChevronDown class="h-3.5 w-3.5 shrink-0 transition-transform {assetsOpen ? 'rotate-180' : ''}" />
-            </span>
+<!-- One summary band: Available now leads as the display figure, the rest sit beside it behind hairlines.
+     Phones show the two numbers that decide the month; opening Available now adds the rest and the assets. -->
+<section class="readout shrink-0" class:open={assetsOpen || sheet} class:sheet aria-label="Outlook">
+    <div class="cell lead">
+        <button type="button" class="cell-button" aria-expanded={assetsOpen} aria-controls="finance-current-assets" aria-label="Available now" onclick={() => (assetsOpen = !assetsOpen)}>
+            <Metric label="Available now" size="lg" unit="Kč" detail={assetNames || "Add current assets"}>
+                <DataValue>{formatAmount(outlook.available)}</DataValue>
+            </Metric>
+            <IconChevronDown class="chevron h-4 w-4 shrink-0 transition-transform {assetsOpen ? 'rotate-180' : ''}" />
         </button>
     </div>
     <div class="cell" class:warn={below}>
         <button type="button" class="cell-button" disabled={!onJump || lowDay === "Today"} onclick={() => onJump?.(outlook.low.date)}>
-            <span class="label">Lowest ahead</span>
-            <span class="value">
-                <DataValue><Amount value={outlook.low.amount} /></DataValue>
-            </span>
-            <span class="sub">
-                <DataValue>{lowDay}{lowDistance > 0 && floor === 0 && !below ? ` · in ${lowDistance} ${lowDistance === 1 ? "day" : "days"}` : ` · ${formatAmount(below ? -margin : margin)} ${below ? "under" : "over"} floor`}</DataValue>
-            </span>
+            <Metric label="Lowest ahead" unit="Kč" tone={below ? "negative" : "neutral"}>
+                <DataValue>{formatAmount(outlook.low.amount)}</DataValue>
+                {#snippet delta()}<DataValue>{lowDay}{lowDistance > 0 && floor === 0 && !below ? ` · in ${lowDistance} ${lowDistance === 1 ? "day" : "days"}` : ` · ${formatAmount(below ? -margin : margin)} ${below ? "under" : "over"} floor`}</DataValue>{/snippet}
+            </Metric>
         </button>
     </div>
     <div class="cell extra">
         <button type="button" class="cell-button" disabled={!onJump || !outlook.endDate} onclick={() => outlook.endDate && onJump?.(outlook.endDate)}>
-            <span class="label">After last plan</span>
-            <span class="value">
-                <DataValue><Amount value={outlook.end} /></DataValue>
-            </span>
-            <span class="sub"><DataValue>{outlook.endDate ? `${endDay} · ${formatAmount(outlook.end - outlook.available, { signed: true })}` : "Nothing planned"}</DataValue></span>
+            <Metric label="After last plan" unit="Kč">
+                <DataValue>{formatAmount(outlook.end)}</DataValue>
+                {#snippet delta()}<DataValue>{outlook.endDate ? `${endDay} · ${formatAmount(outlook.end - outlook.available, { signed: true })}` : "Nothing planned"}</DataValue>{/snippet}
+            </Metric>
         </button>
     </div>
     <div class="cell extra">
-        <label class="label" for="finance-floor">Floor</label>
-        <span class="value">
+        <label class="floor-label" for="finance-floor">Edit floor</label>
+        <Metric label="Floor" unit="Kč" detail="Warn below this balance">
             <input
                 id="finance-floor"
                 class="floor-input"
                 inputmode="numeric"
                 autocomplete="off"
                 value={formatAmount(floor)}
-                aria-describedby="finance-floor-help"
                 onchange={(event) => commitFloor(event.currentTarget)}
                 onkeydown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
-            /><span class="stor-unit">Kč</span>
-        </span>
-        <span class="sub" id="finance-floor-help">Warn below this balance</span>
+            />
+        </Metric>
     </div>
 </section>
 
@@ -131,68 +124,35 @@
 <style>
     .readout {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        overflow: hidden;
+        grid-template-columns: 1.55fr repeat(3, minmax(0, 1fr));
+        border-block: 1px solid var(--stor-border);
     }
-    .cell {
-        position: relative;
-        display: flex;
-        min-width: 0;
-        flex-direction: column;
-        gap: 2px;
-        padding: 0.875rem 1.25rem 0.8125rem;
-        border-left: 1px solid color-mix(in srgb, var(--stor-border) 62%, transparent);
-    }
+    .cell { position: relative; min-width: 0; padding: 1rem 1.5rem; border-left: 1px solid var(--stor-border); }
+    .cell:first-child { border-left: 0; padding-left: 0; }
     .cell:has(> .cell-button) { padding: 0; }
-    .cell:first-child { border-left: 0; }
     .cell-button {
-        display: flex;
-        min-width: 0;
-        flex-direction: column;
-        gap: 2px;
-        padding: 0.875rem 1.25rem 0.8125rem;
+        position: relative;
+        display: block;
+        width: 100%;
+        height: 100%;
+        padding: 1rem 1.5rem;
         border: 0;
         background: transparent;
         text-align: left;
         color: inherit;
     }
-    .cell:first-child .cell-button { border-radius: var(--stor-panel-radius) 0 0 var(--stor-panel-radius); }
+    .lead .cell-button { padding-left: 0; }
     .cell-button:not(:disabled):hover { background: var(--stor-surface-hover); }
     .cell-button:disabled { cursor: default; }
     .cell-button:focus-visible { outline: 2px solid var(--stor-focus); outline-offset: -2px; }
-    .label { font-size: 12px; font-weight: 500; color: var(--stor-muted-text); }
-    .value {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: baseline;
-        column-gap: 0.5rem;
-        font-size: 22px;
-        font-weight: 600;
-        line-height: 1.25;
-        letter-spacing: -0.012em;
-        color: var(--stor-ink);
-        white-space: nowrap;
-        font-variant-numeric: tabular-nums;
-    }
-    .warn .value, .warn .sub { color: var(--stor-warning); }
-    .sub {
-        display: flex;
-        min-width: 0;
-        align-items: center;
-        gap: 0.25rem;
-        overflow: hidden;
-        font-family: var(--stor-font-mono);
-        font-size: 11.5px;
-        font-weight: 500;
-        color: var(--stor-muted-text);
-        white-space: nowrap;
-        text-overflow: ellipsis;
-    }
+    .readout :global(.chevron) { position: absolute; top: 1rem; right: 1rem; color: var(--stor-faint-text); }
+    .warn :global(.stor-metric-support) { color: var(--stor-warning); }
+    .floor-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
     .floor-input {
         width: 7ch;
         padding: 0;
         border: 0;
-        border-bottom: 1.5px dashed var(--stor-border);
+        border-bottom: 1.5px dashed var(--stor-border-strong);
         border-radius: 0;
         background: transparent;
         font: inherit;
@@ -202,28 +162,21 @@
     }
     .floor-input:focus { border-bottom-color: var(--stor-focus); }
     @media (max-width: 1023px) {
-        .cell { padding: 0.625rem 0.875rem; }
-        .cell-button { padding: 0.625rem 0.875rem; }
-        .value { font-size: 18px; }
+        .readout { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .cell, .cell-button { padding: 0.75rem 1rem; }
     }
-    .label { display: flex; align-items: center; gap: 0.25rem; }
-    .label :global(.phone-only) { display: none; }
-    .sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); box-shadow: none; border: 1px solid color-mix(in srgb, var(--stor-border) 62%, transparent); }
+    .sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); border-block: 0; }
+    .sheet .cell:first-child { padding-left: 1rem; }
+    .sheet .lead .cell-button { padding-left: 1rem; }
     .sheet .cell:nth-child(3) { border-left: 0; }
-    .sheet .extra { display: flex; border-top: 1px solid color-mix(in srgb, var(--stor-border) 62%, transparent); }
-    .sheet .label :global(.phone-only) { display: none; }
+    .sheet .extra { border-top: 1px solid var(--stor-border); }
     /* Phones keep the outlook to one short row: label and figure, the details once it is opened. */
     @media (max-width: 639px) {
         .readout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .cell, .cell-button { gap: 0; padding: 0.4375rem 0.75rem 0.5rem; }
-        .label { font-size: 11px; line-height: 1.3; }
-        .label :global(.phone-only) { display: block; }
-        .value { font-size: 16px; line-height: 1.3; }
-        .sub { font-size: 11px; }
-        .readout:not(.open) .sub { display: none; }
+        .cell, .cell-button { padding: 0.5rem 0.75rem; }
+        .readout:not(.open) :global(.stor-metric-support) { display: none; }
         .extra { display: none; }
-        .open .extra { display: flex; border-top: 1px solid color-mix(in srgb, var(--stor-border) 62%, transparent); }
+        .open .extra { display: block; border-top: 1px solid var(--stor-border); }
         .open .cell:nth-child(3) { border-left: 0; }
-        .open .cell:first-child .cell-button { border-radius: var(--stor-panel-radius) 0 0 0; }
     }
 </style>

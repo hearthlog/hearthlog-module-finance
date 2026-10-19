@@ -1,10 +1,9 @@
 import { endOfMonth, format, parseISO } from 'date-fns';
-import { formatNumber, MINUS } from '@hearthlog/sdk/format';
 import { monthKeyOf } from '@hearthlog/sdk/axis';
 
 /**
- * Pure helpers for the Finance timeline: which filter the URL asks for, which
- * months the endless list holds, and the geometry the balance line draws.
+ * Pure helpers for the Finance timeline: which filter the URL asks for and
+ * which months the endless list holds.
  * Balances and totals always come from SQLite.
  */
 
@@ -69,45 +68,4 @@ export function clampMonth(key: string, bounds: MonthBounds): string {
 export function monthWindow(key: string): DateWindow {
     const first = parseISO(`${key}-01`);
     return { start: format(first, DAY), end: format(endOfMonth(first), DAY) };
-}
-
-// ---------------------------------------------------------------- geometry
-
-/** A little air around the reached values, always including the floor. */
-export function paddedDomain(min: number, max: number, floor: number, pad = 0.08): [number, number] {
-    const lo = Math.min(min, max, floor);
-    const hi = Math.max(min, max, floor);
-    const span = hi - lo || Math.max(Math.abs(hi), 1);
-    return [lo - span * pad, hi + span * pad];
-}
-
-/**
- * The scale for balance charts: the reached values, plus the floor only when
- * it is near them, so a distant floor (often 0) never flattens the line.
- */
-export function outlookDomain(min: number, max: number, floor: number): [number, number] {
-    const span = max - min || Math.max(Math.abs(max), 1);
-    return paddedDomain(min, max, floor >= min - span * 0.25 ? floor : min);
-}
-
-/** Round tick values inside a domain: steps of 1, 2 or 5 times a power of ten. */
-export function niceTicks(lo: number, hi: number, count: number): number[] {
-    const span = hi - lo;
-    if (!(span > 0) || count < 1) return [];
-    const raw = span / count;
-    const magnitude = 10 ** Math.floor(Math.log10(raw));
-    const normalized = raw / magnitude;
-    const step = (normalized < 1.5 ? 1 : normalized < 3 ? 2 : normalized < 7 ? 5 : 10) * magnitude;
-    const ticks: number[] = [];
-    for (let value = Math.ceil(lo / step) * step; value <= hi + step * 1e-9; value += step) {
-        ticks.push(Math.round(value / step) * step);
-    }
-    return ticks;
-}
-
-/** `184k`, `−12k`, `950` — compact axis labels in the app locale. */
-export function axisLabel(value: number): string {
-    const magnitude = Math.abs(value);
-    const text = magnitude >= 1000 ? `${formatNumber(Math.round(magnitude / 1000))}k` : formatNumber(Math.round(magnitude));
-    return value < 0 ? `${MINUS}${text}` : text;
 }
