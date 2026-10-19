@@ -3,7 +3,7 @@
     const drawerFormId0 = drawerId + "-0";
 
     import { Drawer } from "@hearthlog/sdk/ui";
-    import { Button } from "@hearthlog/sdk/ui";
+    import { AmountField, Button, Field } from "@hearthlog/sdk/ui";
     import { DatePicker } from "@hearthlog/sdk/ui";
     import { Input } from "@hearthlog/sdk/ui";
     import { Label } from "@hearthlog/sdk/ui";
@@ -281,11 +281,6 @@
     {onClose}
 >
     <form id={drawerFormId0} class="flex flex-col gap-4" onsubmit={submit}>
-        <div class="grid grid-cols-2 rounded-full bg-[var(--stor-surface-muted)] p-1" aria-label="Transaction direction">
-            <button type="button" class="h-10 rounded-full text-sm font-semibold transition {form.direction === 'expense' ? 'bg-[var(--stor-action)] text-[var(--stor-action-text)] shadow-[var(--stor-shadow-sm)]' : 'text-[var(--stor-muted-text)]'}" aria-pressed={form.direction === "expense"} onclick={() => (form.direction = "expense")}>Expense</button>
-            <button type="button" class="h-10 rounded-full text-sm font-semibold transition {form.direction === 'income' ? 'bg-[var(--stor-action)] text-[var(--stor-action-text)] shadow-[var(--stor-shadow-sm)]' : 'text-[var(--stor-muted-text)]'}" aria-pressed={form.direction === "income"} onclick={() => (form.direction = "income")}>Income</button>
-        </div>
-
         <Label class="block max-md:order-2">
             Name
             <Input
@@ -299,22 +294,15 @@
             />
         </Label>
 
-        <Label class="block max-md:order-1">
-            <span class="max-md:sr-only">Amount</span>
-            <div class="relative mt-1.5 max-md:mt-0">
-                <Input
-                    data-testid="transaction-amount"
-                    type="number"
-                    inputmode="decimal"
-                    step="0.01"
-                    bind:value={form.amount}
-                    class="pr-12 font-medium max-md:!h-16 max-md:!rounded-none max-md:!border-0 max-md:!border-b-2 max-md:!border-[var(--stor-action)] max-md:!bg-transparent max-md:!px-0 max-md:!text-[40px] max-md:!font-semibold max-md:!shadow-none max-md:!ring-0 max-md:!outline-none"
-                    onblur={() => void suggest()}
-                />
-                <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-[var(--stor-muted-text)]">Kč</span>
-            </div>
-            <span class="mt-1 block text-[11px] leading-4 text-[var(--stor-muted-text)] max-md:hidden">Enter a positive amount; Expense or Income sets the direction.</span>
-        </Label>
+        <Field class="max-md:order-1" label="Amount" htmlFor="{drawerId}-amount" labelClass="max-md:sr-only" hintClass="max-md:hidden" hint="Type 1200+84 to add. Expense or Income sets the direction.">
+            <AmountField
+                id="{drawerId}-amount"
+                data-testid="transaction-amount"
+                bind:value={() => form.amount || null, (value) => (form.amount = value ?? 0)}
+                bind:direction={form.direction}
+                onblur={() => void suggest()}
+            />
+        </Field>
 
         <div class="grid gap-3 max-md:order-3 sm:grid-cols-2">
             <div class="block">
