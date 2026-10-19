@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Drawer } from "@hearthlog/sdk/ui";
-    import { Button } from "@hearthlog/sdk/ui";
+    import { AmountField, Button, Field } from "@hearthlog/sdk/ui";
     import { Input } from "@hearthlog/sdk/ui";
     import { Label } from "@hearthlog/sdk/ui";
     import { Select, type SelectOption } from "@hearthlog/sdk/ui";
@@ -104,7 +104,9 @@
             </div>
         </fieldset>
         <Label class="block">Name<Input data-testid="budget-item-name" class="mt-1.5" bind:value={form.name} placeholder="Rent, salary, groceries…" /></Label>
-        <Label class="block">Amount<div class="relative mt-1.5"><Input data-testid="budget-item-amount" type="number" inputmode="decimal" min="0.01" step="0.01" class="pr-12 font-medium" bind:value={form.amount} /><span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-[var(--stor-muted-text)]">Kč</span></div><span class="mt-1 block text-xs text-[var(--stor-muted-text)] max-md:hidden">Always enter a positive amount.</span></Label>
+        <Field label="Amount" htmlFor="budget-item-amount" hintClass="max-md:hidden" hint="Always enter a positive amount.">
+            <AmountField id="budget-item-amount" data-testid="budget-item-amount" directions={false} bind:value={() => form.amount || null, (value) => (form.amount = value ?? 0)} />
+        </Field>
         <Label class="block">Category<Select class="mt-1.5" value={form.category} options={categories} onValueChange={(value) => form.category = value} /></Label>
         {#if !initialItem}<label class="flex min-h-11 items-center gap-2 text-sm text-stone-700"><input type="checkbox" bind:checked={addAnother} class="h-4 w-4 rounded accent-[var(--stor-action)]" /> Add another after saving</label>{/if}
         {#if errorMessage}<p class="text-sm text-[var(--stor-negative)]" role="alert">{errorMessage}</p>{/if}
