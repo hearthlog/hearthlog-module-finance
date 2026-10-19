@@ -19,7 +19,6 @@
         anchor,
         show,
         bounds,
-        domain,
         floor,
         available,
         selectedIds,
@@ -43,7 +42,6 @@
         show: TimelineShow;
         /** The months this filter lists; the first one is fixed while the list is open. */
         bounds: MonthBounds;
-        domain: [number, number];
         floor: number;
         available: number;
         selectedIds: Set<string>;
@@ -62,8 +60,6 @@
         /** The first month with rows from the top edge down, and the first day showing there. */
         onVisibleChange?: (visible: { month: string; date: string }) => void;
     } = $props();
-
-    const river = $derived(show !== "done");
 
     // Months are counted from today's month. All runs both ways, plans start
     // there and done history ends at its last month; an open end is wide
@@ -143,7 +139,6 @@
     home={{ ...todayTarget, label: "Today" }}
     {pick}
     onVisibleChange={(position) => onVisibleChange?.({ month: position.key, date: position.at })}
-    class={river ? "[--river:2.75rem] sm:[--river:8rem] lg:[--river:9.5rem] xl:[--river:12rem]" : ""}
     data-timeline-scroll
 >
     {#snippet openingPlaceholder()}
@@ -155,7 +150,6 @@
             {data}
             {today}
             {show}
-            {domain}
             {floor}
             {available}
             {selectedIds}

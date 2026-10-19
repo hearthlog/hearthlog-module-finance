@@ -94,3 +94,14 @@ describe('uncategorized rows of a month', () => {
         expect(await rows.countUncategorizedInMonth('2026-09-01', '2026-09-30')).toBe(2);
     });
 });
+
+describe('plans and done rows of a month', () => {
+    it('counts rows dated before today as done and the rest as plans', async () => {
+        const rows = repository([
+            ['A', 'food', '2026-09-01'], ['B', 'food', '2026-09-14'], ['C', 'food', '2026-09-15'],
+            ['D', 'food', '2026-09-30T10:00:00'], ['E', 'food', '2026-10-01'],
+        ]);
+        expect(await rows.countKindsInMonth('2026-09-01', '2026-09-30', '2026-09-15')).toEqual({ planned: 2, done: 2 });
+        expect(await rows.countKindsInMonth('2026-11-01', '2026-11-30', '2026-09-15')).toEqual({ planned: 0, done: 0 });
+    });
+});
