@@ -709,7 +709,7 @@
     <PageHeader title="Finance" class="shrink-0 px-2.5 pt-2 pb-1 max-md:sr-only sm:px-3 sm:pt-4 sm:pb-2" sidebarTabs tabs={financeNavigation} context={headerPeriod}>
         {#if !isBudgetTab}
             <CommandOnly>
-                <Button class="hidden lg:inline-flex" data-testid="open-transaction-drawer" onclick={() => openAddTransaction(undefined, show === "done" ? "archived" : "active")}>
+                <Button class="hidden lg:inline-flex" data-testid="open-transaction-drawer" data-stor-new shortcut="N" onclick={() => openAddTransaction(undefined, show === "done" ? "archived" : "active")}>
                     <IconPlus class="h-4 w-4" /> {show === "done" ? "Record past transaction" : "Add transaction"}
                 </Button>
             </CommandOnly>
