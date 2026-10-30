@@ -129,6 +129,13 @@
     }
     .cell { position: relative; min-width: 0; padding: 1rem 1.5rem; border-left: 1px solid var(--stor-border); }
     .cell:first-child { border-left: 0; padding-left: 0; }
+    /* From 640px the outlook is one card: hairline frame, card shadow, cells split by the rule colour. */
+    @media (min-width: 640px) {
+        .readout:not(.sheet) { border: 1px solid var(--stor-hairline); border-radius: var(--stor-section-radius); background: var(--stor-surface); box-shadow: var(--stor-elevation-1); overflow: hidden; }
+        .readout:not(.sheet) .cell { border-left-color: var(--stor-rule); }
+        .readout:not(.sheet) .cell:first-child { padding-left: 1.5rem; }
+        .readout:not(.sheet) .lead .cell-button { padding-left: 1.5rem; }
+    }
     .cell:has(> .cell-button) { padding: 0; }
     .cell-button {
         position: relative;

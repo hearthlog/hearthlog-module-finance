@@ -245,13 +245,13 @@
         padding: 0 0.625rem;
         border: 0;
         border-radius: 999px;
-        background: var(--stor-surface);
-        box-shadow: inset 0 0 0 1px var(--stor-border-strong);
+        background: var(--stor-surface-raised);
+        box-shadow: var(--stor-elevation-2);
         font-size: 12px;
         font-weight: 600;
         color: var(--stor-ink);
     }
-    .done-button:hover { background: var(--stor-surface-hover); }
+    .done-button:hover { box-shadow: var(--stor-control-shadow-hover); }
     .done-button:disabled { opacity: 0.45; }
     @media (max-width: 639px) {
         .timeline-row {
