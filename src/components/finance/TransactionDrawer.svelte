@@ -49,7 +49,7 @@
     let moreOpen = $state(false);
     let pickDate = $state(false);
     let allCategories = $state(false);
-    const chip = (on: boolean) => `h-9 rounded-full px-3.5 text-sm font-medium ${on ? "bg-[var(--stor-accent-soft)] font-semibold text-[var(--stor-accent-strong)]" : "bg-[var(--stor-surface-muted)] text-[var(--stor-ink)]"}`;
+    const chip = (on: boolean) => `h-9 rounded-full px-3.5 text-sm font-medium ${on ? "bg-[var(--stor-accent-soft)] font-semibold text-[var(--stor-accent-strong)]" : "bg-[var(--stor-surface-raised)] text-[var(--stor-ink)] shadow-[var(--stor-elevation-2)] hover:shadow-[var(--stor-control-shadow-hover)]"}`;
     let topCategories = $state<string[]>([]);
 
     let form = $state<TransactionDraft>({
