@@ -675,6 +675,7 @@
                 onNavigate={(targetYear, targetMonth) => goToMonth(`${targetYear}-${String(targetMonth).padStart(2, "0")}`)}
                 compact
                 phoneArrows={false}
+                slide={false}
                 class="sm:w-auto"
             />
             <div class="mobile-scroll flex min-w-0 max-w-full items-center gap-2 overflow-x-auto">
@@ -769,6 +770,7 @@
                                 onNavigate={(targetYear, targetMonth) => goToMonth(`${targetYear}-${String(targetMonth).padStart(2, "0")}`)}
                                 compact
                                 phoneArrows={false}
+                                slide={false}
                                 class="min-w-0"
                             />
                             {#if uncategorized > 0}
