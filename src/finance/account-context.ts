@@ -16,3 +16,19 @@ export function provideRowAccounts(read: () => ReadonlyMap<string, RowAccount>):
 export function rowAccounts(): () => ReadonlyMap<string, RowAccount> {
     return getContext<(() => ReadonlyMap<string, RowAccount>) | undefined>(KEY) ?? (() => new Map());
 }
+
+/** What a looks-paid plan row can do: confirm the bank row settles it, or keep them apart. */
+export interface PlanActions {
+    confirm(planId: string): Promise<void>;
+    decline(planId: string): Promise<void>;
+}
+
+const PLAN_KEY = Symbol('finance-plan-actions');
+
+export function providePlanActions(actions: PlanActions): void {
+    setContext(PLAN_KEY, actions);
+}
+
+export function planActions(): PlanActions | null {
+    return getContext<PlanActions | undefined>(PLAN_KEY) ?? null;
+}

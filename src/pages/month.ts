@@ -25,6 +25,8 @@ export interface FinancePageData {
     connections: BankConnection[];
     /** Mails set aside that wait for the user: unread ones and forwarding confirmation codes. */
     mails: BankMail[];
+    /** Bank rows waiting for review, and how many were not yet checked against the plans. */
+    review: { pending: number; unmatched: number };
     budgetPlans: BudgetPlanSummary[];
     budgetIncomeItems: BudgetItem[];
     budgetExpenseItems: BudgetItem[];
@@ -45,6 +47,7 @@ function emptyData(year: number, month: number): FinancePageData {
         assetsSum: 0,
         connections: [],
         mails: [],
+        review: { pending: 0, unmatched: 0 },
         budgetPlans: [],
         budgetIncomeItems: [],
         budgetExpenseItems: [],
@@ -75,9 +78,10 @@ const loadData = async (
         assetsReady,
         loadBalanceFloor(),
         queryDatabase(async (repositories) => {
-            const [outlook, range, budgetPlans] = await Promise.all([
+            const [outlook, range, review, budgetPlans] = await Promise.all([
                 repositories.timeline.getOutlook({ today }),
                 repositories.timeline.getRange({ today }),
+                repositories.transactions.countReview(),
                 isBudgetTab ? repositories.budgets.getPlans() : Promise.resolve([] as BudgetPlanSummary[]),
             ]);
             const selectedPlan = budgetPlans.find((plan) => plan.id === requestedPlanId) ?? budgetPlans[0];
@@ -87,7 +91,7 @@ const loadData = async (
                     repositories.budgets.getPlanItems(selectedPlan.id, 'expense', expenseSort),
                 ])
                 : [[], []];
-            return { outlook, range, budgetPlans, budgetIncomeItems, budgetExpenseItems, selectedPlanId: selectedPlan ? selectedPlan.id : null };
+            return { outlook, range, review, budgetPlans, budgetIncomeItems, budgetExpenseItems, selectedPlanId: selectedPlan ? selectedPlan.id : null };
         }),
     ]);
 

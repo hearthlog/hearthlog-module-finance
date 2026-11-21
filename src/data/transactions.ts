@@ -460,6 +460,114 @@ export function createTransactionRepository(session: ReadModelSession) {
             return rows.map((row) => String(row.category));
         },
 
+        /** Bank rows nobody has reviewed yet, oldest first (the review sheet). */
+        getReviewRows(limit = 500): Promise<Transaction[]> {
+            return withTimeout(
+                session.selectFrom('transactions')
+                    .selectAll()
+                    .where('review', '=', 'new')
+                    .orderBy('due_date', 'asc')
+                    .orderBy('created_at', 'asc')
+                    .orderBy('id', 'asc')
+                    .limit(limit)
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'Review rows query timed out',
+            );
+        },
+
+        /** How many bank rows wait for review, and how many of them were not yet checked against the plans. */
+        async countReview(): Promise<{ pending: number; unmatched: number }> {
+            const result = await withTimeout(
+                session.selectFrom('transactions')
+                    .select([
+                        sql<number>`COUNT(*)`.as('pending'),
+                        sql<number>`COALESCE(SUM(CASE WHEN COALESCE(plan_match, '') = '' THEN 1 ELSE 0 END), 0)`.as('unmatched'),
+                    ])
+                    .where('review', '=', 'new')
+                    .executeTakeFirst(),
+                DB_TIMEOUT_MS,
+                'Review count timed out',
+            );
+            return { pending: toNumber(result?.pending), unmatched: toNumber(result?.unmatched) };
+        },
+
+        /** The review backlog: how many bank rows wait and the day of the oldest. */
+        async reviewBacklog(): Promise<{ pending: number; oldest: string | null }> {
+            const result = await withTimeout(
+                session.selectFrom('transactions')
+                    .select([sql<number>`COUNT(*)`.as('pending'), sql<string | null>`MIN(substr(trim(due_date), 1, 10))`.as('oldest')])
+                    .where('review', '=', 'new')
+                    .executeTakeFirst(),
+                DB_TIMEOUT_MS,
+                'Review backlog timed out',
+            );
+            return { pending: toNumber(result?.pending), oldest: result?.oldest ? String(result.oldest) : null };
+        },
+
+        /** Open plans in `[from, to]` that no bank row names yet: the candidates for matching. */
+        getOpenPlans(from: string, to: string): Promise<Transaction[]> {
+            return withTimeout(
+                session.selectFrom('transactions')
+                    .selectAll()
+                    .where('transaction_status', '=', 'active')
+                    .where(sql<boolean>`substr(trim(due_date), 1, 10) BETWEEN ${from} AND ${to}`)
+                    .where(sql<boolean>`NOT EXISTS (SELECT 1 FROM ${session.table('transactions')} AS bank_matches WHERE bank_matches.plan_match = transactions.id)`)
+                    .orderBy('due_date', 'asc')
+                    .orderBy('id', 'asc')
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'Open plans query timed out',
+            );
+        },
+
+        getByIds(ids: string[]): Promise<Transaction[]> {
+            if (ids.length === 0) return Promise.resolve([]);
+            return withTimeout(
+                session.selectFrom('transactions').selectAll().where('id', 'in', ids).execute(),
+                DB_TIMEOUT_MS,
+                'Rows by id query timed out',
+            );
+        },
+
+        /**
+         * For each bank text, the names reviewed bank rows with that text were given (lower case): a plan of such a
+         * name was confirmed for this text before.
+         */
+        async confirmedNames(bankTexts: string[]): Promise<Record<string, string[]>> {
+            const texts = [...new Set(bankTexts.filter(Boolean))];
+            if (texts.length === 0) return {};
+            const rows = await withTimeout(
+                session.selectFrom('transactions')
+                    .select(['bank_text', 'name'])
+                    .where('review', '=', 'reviewed')
+                    .where('bank_text', 'in', texts)
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'Confirmed names query timed out',
+            );
+            const out: Record<string, string[]> = {};
+            for (const row of rows) (out[String(row.bank_text)] ??= []).push(String(row.name ?? '').trim().toLowerCase());
+            return out;
+        },
+
+        /** Bank rows since a day that are not yet part of a transfer and were not ruled out as one. */
+        getTransferCandidates(since: string): Promise<Transaction[]> {
+            return withTimeout(
+                session.selectFrom('transactions')
+                    .selectAll()
+                    .where('bank_ref', '!=', '')
+                    .where('transfer_id', '=', '')
+                    .where(sql<boolean>`substr(trim(due_date), 1, 10) >= ${since}`)
+                    .orderBy('due_date', 'asc')
+                    .orderBy('id', 'asc')
+                    .limit(1000)
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'Transfer candidates query timed out',
+            );
+        },
+
         /** Which of these ids exist (bulk tools that must not add or remove twice). */
         async existingIds(ids: string[]): Promise<string[]> {
             if (ids.length === 0) return [];

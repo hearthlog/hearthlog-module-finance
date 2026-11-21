@@ -94,19 +94,20 @@ export async function loadFixtures(now = new Date()): Promise<void> {
     ];
     for (const payload of assets) if (!have.assets.has(payload.id)) events.push(event<AddAssetEvent>('ASSET_ADDED', payload));
 
-    type Row = { n: number; name: string; amount: number; date: string; asset?: string; category: string; review?: string; bank_text?: string; plan_match?: string; transfer_id?: string; planned?: boolean };
+    type Row = { n: number; name: string; amount: number; date: string; asset?: string; category: string; review?: string; bank_text?: string; plan_match?: string; transfer_id?: string; counterparty?: string; planned?: boolean };
     const rows: Row[] = [
         { n: 101, name: 'Dr. Max lékárna', amount: -436, date: day(-5), asset: ACCOUNTS.card, category: 'health' },
         { n: 102, name: 'Rohlik.cz', amount: -2_140, date: day(-4), asset: ACCOUNTS.current, category: 'food', review: 'reviewed' },
         { n: 103, name: 'Spotify', amount: -169, date: day(-4), asset: ACCOUNTS.air, category: 'subscriptions' },
-        { n: 104, name: 'To savings', amount: -10_000, date: day(-3), asset: ACCOUNTS.current, category: 'transfer', transfer_id: id(900) },
-        { n: 105, name: 'To savings', amount: 10_000, date: day(-3), asset: ACCOUNTS.savings, category: 'transfer', transfer_id: id(900) },
+        // Both sides of a move to savings, not yet confirmed as a transfer (the review pairs them).
+        { n: 104, name: 'PŘEVOD NA SPOŘENÍ', amount: -10_000, date: day(-3), asset: ACCOUNTS.current, category: 'unknown', counterparty: 'ČSOB Spořicí · CZ0003000000000000008802' },
+        { n: 105, name: 'PŘEVOD Z BĚŽNÉHO ÚČTU', amount: 10_000, date: day(-3), asset: ACCOUNTS.savings, category: 'unknown' },
         { n: 106, name: 'Lidl', amount: -742, date: day(-3), asset: ACCOUNTS.card, category: 'food' },
         { n: 107, name: 'TRVALÝ PŘÍKAZ NÁJEM', amount: -18_500, date: day(-2), asset: ACCOUNTS.current, category: 'housing', plan_match: id(201) },
         { n: 108, name: 'Alza.cz', amount: -3_290, date: day(-2), asset: ACCOUNTS.current, category: 'unknown' },
         { n: 109, name: 'Albert', amount: -1_284, date: day(-1), asset: ACCOUNTS.card, category: 'food' },
         { n: 110, name: 'Shell', amount: -1_650, date: day(-1), asset: ACCOUNTS.card, category: 'transport' },
-        { n: 111, name: 'ATM withdrawal', amount: -2_000, date: day(-1), asset: ACCOUNTS.current, category: 'transfer' },
+        { n: 111, name: 'VÝBĚR Z BANKOMATU', amount: -2_000, date: day(-1), asset: ACCOUNTS.current, category: 'unknown' },
         { n: 112, name: 'Bolt', amount: -189, date: today, asset: ACCOUNTS.current, category: 'transport', review: 'reviewed' },
         { n: 201, name: 'Rent', amount: -18_500, date: day(1), category: 'housing', planned: true },
         { n: 202, name: 'Electricity', amount: -2_350, date: day(3), category: 'housing', planned: true },
@@ -129,6 +130,7 @@ export async function loadFixtures(now = new Date()): Promise<void> {
             ...(row.planned ? {} : { bank_ref: `dev:${row.n}`, bank_text: row.bank_text ?? row.name.toUpperCase(), review: row.review ?? 'new' }),
             ...(row.plan_match ? { plan_match: row.plan_match } : {}),
             ...(row.transfer_id ? { transfer_id: row.transfer_id } : {}),
+            ...(row.counterparty ? { counterparty: row.counterparty } : {}),
         }));
     }
     await run(events);

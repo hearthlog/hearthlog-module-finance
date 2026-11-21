@@ -44,7 +44,10 @@
     import { formatAmount } from "@hearthlog/sdk/format";
     import { loadPhoneBalance, savePhoneBalance } from "../finance/phone-balance.js";
     import type { FinancePageData } from "./month.js";
-    import { provideRowAccounts } from "../finance/account-context.js";
+    import { providePlanActions, provideRowAccounts } from "../finance/account-context.js";
+    import { runMatchingPass } from "../finance/matching-pass.js";
+    import { confirmPlan, declinePlan, run as runReview } from "../finance/review-commands.js";
+    import ReviewSheet from "../components/finance/ReviewSheet.svelte";
     import { bankInfo } from "../finance/banks.js";
 
     type TransactionDrawerComponent = typeof import("../components/finance/TransactionDrawer.svelte").default;
@@ -66,6 +69,33 @@
         mark: bankInfo(view.connections.find((connection) => connection.id === asset.connection_id)?.bank)?.mark ?? "",
     }])));
     provideRowAccounts(() => rowAccountMap);
+
+    // New bank rows are checked against the plans as soon as they are here; a match pauses its plan.
+    let reviewOpen = $state(false);
+    $effect(() => {
+        if (browser && view.review.unmatched > 0) void runMatchingPass().catch((error) => console.error("[Finance] Matching failed:", error));
+    });
+
+    /** Confirm / Not this one on a looks-paid plan in the list: the same decisions the review sheet makes. */
+    async function decidePlan(planId: string, confirm: boolean): Promise<void> {
+        try {
+            const rows = await queryDatabase((repositories) => repositories.transactions.getReviewRows());
+            const row = rows.find((candidate) => candidate.plan_match === planId);
+            const [plan] = await queryDatabase((repositories) => repositories.transactions.getByIds([planId]));
+            if (!row || !plan) return;
+            const decision = confirm ? confirmPlan(row, plan) : declinePlan(row);
+            await runReview(decision.events);
+            await refreshFinanceData();
+            notify.success(confirm ? `${plan.name || "The plan"} is settled by the bank payment` : `Kept apart: ${plan.name || "the plan"} counts again`, {
+                label: "Undo",
+                run: () => runReview(decision.undo).then(refreshFinanceData).catch(() => notify.error("Could not undo")),
+            });
+        } catch (error) {
+            console.error("[Finance] Plan decision failed:", error);
+            notify.error("The plan could not be updated");
+        }
+    }
+    providePlanActions({ confirm: (planId) => decidePlan(planId, true), decline: (planId) => decidePlan(planId, false) });
     const displayResource = $derived({
         loading: shown ? false : resource.loading,
         error: resource.error,
@@ -698,6 +728,9 @@
                         >{option.label}{#if filterCount(option.id) !== null}<span class="stor-tab-count ml-1.5">{filterCount(option.id)}</span>{/if}</a>
                     {/each}
                 </nav>
+                {#if view.review.pending > 0}
+                    <button type="button" class="review-chip shrink-0" onclick={() => (reviewOpen = true)}><span class="n">{view.review.pending}</span>To review</button>
+                {/if}
                 {#if uncategorized > 0}
                     <CommandOnly>
                         <Button variant="secondary" size="sm" class="shrink-0" onclick={openSort}>Sort {uncategorized} uncategorized</Button>
@@ -873,6 +906,7 @@
     </PhoneGlance>
 
     <!-- A linked account's balance is the bank's: only hand-kept ones are typed here. -->
+    <ReviewSheet show={reviewOpen} assets={view.assets} connections={view.connections} onClose={() => (reviewOpen = false)} />
     <AssetsSheet show={assetsSheetOpen} assets={view.assets.filter((asset) => asset.link !== "bank")} onClose={() => (assetsSheetOpen = false)} />
 
     <Modal show={optionsOpen} title="Show" onClose={() => (optionsOpen = false)}>
@@ -898,6 +932,15 @@
                     <span class="absolute top-[3px] h-6 w-6 rounded-full bg-white shadow transition-[left] {phoneBalance ? 'left-[21px]' : 'left-[3px]'}"></span>
                 </span>
             </button>
+            {#if view.review.pending > 0}
+                <button type="button" class="flex min-h-16 w-full items-center gap-3 text-left" onclick={() => { optionsOpen = false; reviewOpen = true; }}>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[15px] font-medium text-[var(--stor-ink)]">Review {view.review.pending} from the bank</span>
+                        <span class="block text-[12.5px] text-[var(--stor-muted-text)]">Plans that look paid, transfers and new rows</span>
+                    </span>
+                    <IconChevronRight class="h-5 w-5 shrink-0 text-[var(--stor-muted-text)]" />
+                </button>
+            {/if}
             {#if uncategorized > 0}
                 <CommandOnly>
                     <button type="button" class="flex min-h-16 w-full items-center gap-3 text-left" onclick={() => { optionsOpen = false; openSort(); }}>
@@ -935,3 +978,33 @@
 </CommandOnly>
 
 <SortUncategorizedSheet show={sortOpen} month={sortMonth} onClose={() => sortOpen = false} onApply={applyCategories} />
+
+<style>
+    /* The review chip: how many bank rows wait, in the accent's soft tint (Main board). */
+    .review-chip {
+        display: inline-flex;
+        height: 36px;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px 0 10px;
+        border: 0;
+        border-radius: 10px;
+        background: var(--stor-accent-soft);
+        color: var(--stor-accent-text);
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .review-chip .n {
+        display: inline-grid;
+        min-width: 20px;
+        height: 20px;
+        place-items: center;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: var(--stor-action);
+        color: var(--stor-action-text, #fff);
+        font-size: 11px;
+    }
+    .review-chip:focus-visible { outline: 2px solid var(--stor-focus); outline-offset: 2px; }
+</style>
