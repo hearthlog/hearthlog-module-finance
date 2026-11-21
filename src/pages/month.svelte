@@ -745,6 +745,7 @@
                     assets={view.assets}
                     assetsSum={view.assetsSum}
                     connections={view.connections}
+                    mails={view.mails}
                     onFloorChange={changeFloor}
                     onJump={(date) => void goToDate(date, "planned")}
                     onUpdateAssets={() => (assetsSheetOpen = true)}
@@ -866,6 +867,7 @@
             assets={view.assets}
             assetsSum={view.assetsSum}
             connections={view.connections}
+                    mails={view.mails}
             onFloorChange={changeFloor}
         />
     </PhoneGlance>

@@ -14,9 +14,11 @@
     import { CommandOnly } from "@hearthlog/sdk/ui";
     import IconPlus from "~icons/mdi/plus";
 
-    let { assets, assetsSum, onUpdateAll } = $props<{
+    let { assets, assetsSum, onUpdateAll, onLink } = $props<{
         assets: Asset[];
         assetsSum: number;
+        /** Starts linking a bank account. */
+        onLink?: () => void;
         /** Opens every balance in one sheet with one save. */
         onUpdateAll?: () => void;
     }>();
@@ -117,6 +119,11 @@
                         >
                             <IconPlus class="h-3.5 w-3.5" /> Add
                         </button>
+                        {#if onLink}
+                            <button type="button" class="ml-2 inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--stor-accent-text)] hover:bg-[var(--stor-surface-muted)]" onclick={onLink}>
+                                Link a bank account
+                            </button>
+                        {/if}
                     {/if}
                 </CommandOnly>
             </div>

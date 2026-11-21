@@ -57,7 +57,11 @@ function event(type: string, entityId: string, base: number | undefined, now: nu
     return { id, type, entityId, timestamp: now, ...(base === undefined ? {} : { baseEntityVersion: base }), payload: { id: entityId.split(':').slice(1).join(':'), ...payload } };
 }
 
-/** One entity, created or updated; ids of the request and the event follow from the entity, its version and the mail. */
+/**
+ * One entity, created or updated. The request and event ids follow from the entity, its version, the mail and when it
+ * was handled: a retry inside one handling repeats them exactly, while handling the same mail again later (a released
+ * claim, a redelivery) sends new ones, which Ledger would otherwise refuse as the same request with another body.
+ */
 async function upsert(
     integration: ServerIntegration,
     entity: string,
@@ -70,9 +74,10 @@ async function upsert(
     await integration.upsertEntity(async (base): Promise<ServiceAppend> => {
         const { type, payload } = build(base);
         const version = String(base ?? 'new');
+        const handled = String(now);
         return {
-            requestId: await deterministicUuid('finance-bank-request', entityId, version, mailKey),
-            events: [event(type, entityId, base, now, payload, await deterministicUuid('finance-bank-event', entityId, version, mailKey))],
+            requestId: await deterministicUuid('finance-bank-request', entityId, version, mailKey, handled),
+            events: [event(type, entityId, base, now, payload, await deterministicUuid('finance-bank-event', entityId, version, mailKey, handled))],
         };
     });
 }
@@ -156,7 +161,9 @@ async function recordPayment(context: BankMailContext, bank: BankInfo, parsed: P
         }
         : { type: 'BANK_CONNECTION_UPDATED', payload: { status: 'active', last_sync_at: nowIso, last_error: '' } });
 
-    await upsert(integration, 'asset', assetId, mailKey, now, (base) => {
+    // A late mail with nothing new for the account (its balance is older, no gap) only adds its row.
+    const accountChanged = chain === null || balance !== null || gap !== 0;
+    if (accountChanged) await upsert(integration, 'asset', assetId, mailKey, now, (base) => {
         const balanceFields = balance === null ? {} : {
             amount: balance,
             synced_at: nowIso,

@@ -1,15 +1,16 @@
 <script lang="ts">
     import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
     import { formatAmount } from "@hearthlog/sdk/format";
-    import { queryDatabase, type Transaction } from "@hearthlog/sdk/data";
+    import { executeLocalCommand, queryDatabase, type Transaction, type UpdateBankMailEvent } from "@hearthlog/sdk/data";
     import { notify } from "@hearthlog/sdk/runtime";
     import { Button, CommandConfirmDialog, CommandDrawer, CommandOnly, DataValue } from "@hearthlog/sdk/ui";
-    import type { Asset, BankConnection } from "../../data/assets.js";
+    import type { Asset, BankConnection, BankMail } from "../../data/assets.js";
     import { ago, kindLong, QUIET_DAYS, type AccountSummary } from "../../finance/accounts.js";
     import { acceptBalanceGap, unlinkAsset } from "../../finance/account-commands.js";
     import { PROVIDER_LABELS } from "../../finance/banks.js";
     import { categoryLabel } from "../../finance/categories.js";
     import BankMark from "./BankMark.svelte";
+    import StatementImport from "./StatementImport.svelte";
 
     /** One linked account: its balance and how fresh it is, what needs a look, this month's rows, and the connection. */
     let {
@@ -17,6 +18,8 @@
         account,
         asset,
         connection,
+        mails = [],
+        assets = [],
         today,
         now,
         onClose,
@@ -25,6 +28,10 @@
         account: AccountSummary | null;
         asset: Asset | null;
         connection: BankConnection | null;
+        /** This bank's mails Finance could not read, still open. */
+        mails?: BankMail[];
+        /** Every asset, to place a statement's rows. */
+        assets?: Asset[];
         today: string;
         now: Date;
         onClose: () => void;
@@ -86,6 +93,17 @@
         }
     }
 
+    let openMailId = $state<string | null>(null);
+
+    async function dismiss(mail: BankMail): Promise<void> {
+        try {
+            await executeLocalCommand({ id: crypto.randomUUID(), type: "BANK_MAIL_UPDATED", timestamp: Date.now(), payload: { id: mail.id, status: "dismissed" } } satisfies UpdateBankMailEvent);
+        } catch (error) {
+            console.error("[AccountDrawer] Dismiss failed", error);
+            notify.error("The email could not be dismissed");
+        }
+    }
+
     async function unlink(): Promise<void> {
         confirmUnlink = false;
         if (!asset) return;
@@ -128,7 +146,7 @@
                     </div>
                 </section>
             {:else if account.state === "unread"}
-                <p class="note warn">{Number(asset?.issue_count) || 1} {Number(asset?.issue_count) > 1 ? "emails" : "email"} from {bankName} could not be read. It is kept as it came: enter the row by hand from it, or dismiss it as not a payment. Nothing is guessed.</p>
+                <p class="note warn">{mails.length || 1} {mails.length > 1 ? "emails" : "email"} from {bankName} could not be read. Each is kept as it came: enter the row by hand from it, or dismiss it as not a payment. Nothing is guessed.</p>
             {:else if account.state === "quiet"}
                 <p class="note warn">Nothing from {bankName} since {day(asset?.synced_at, "d MMM")}. Usually forwarding broke, or the account simply was not used. Check the balance to be sure.</p>
             {:else if account.state === "limit"}
@@ -139,6 +157,26 @@
                 <p class="note negative">The approval at {bankName} has ended. The balance is frozen as of {day(asset?.synced_at, "d MMM")} and still counts in Available now, marked as old, until you renew or type it by hand.</p>
             {:else if account.state === "error"}
                 <p class="note negative">{connection?.last_error || "The provider reported an error."}</p>
+            {/if}
+
+            {#if mails.length}
+                <section class="group" aria-label="Emails not understood">
+                    <div class="group-head"><h3>Emails not understood</h3><span>{mails.length}</span></div>
+                    <div class="card list">
+                        {#each mails as mail (mail.id)}
+                            <div class="mail">
+                                <div class="line">
+                                    <button type="button" class="mail-open" aria-expanded={openMailId === mail.id} onclick={() => (openMailId = openMailId === mail.id ? null : mail.id)}>
+                                        <span class="line-name">{mail.subject || "No subject"}</span>
+                                        <small>{day(mail.received_at, "d MMM HH:mm")} · {mail.reason}</small>
+                                    </button>
+                                    <CommandOnly><Button size="sm" variant="secondary" onclick={() => dismiss(mail)}>Dismiss</Button></CommandOnly>
+                                </div>
+                                {#if openMailId === mail.id}<pre class="mail-text">{mail.body_text}</pre>{/if}
+                            </div>
+                        {/each}
+                    </div>
+                </section>
             {/if}
 
             <section class="group" aria-label="This month">
@@ -166,7 +204,7 @@
                         <div class="kv"><span>Emails from</span><b>{account.bank?.senderDomain ?? "the bank"} <small>· signature checked</small></b></div>
                         <div class="kv"><span>Forwarded to</span><b>{connection?.address || "Not set up yet"}</b></div>
                         <div class="kv"><span>Usually arrive</span><b>With every payment <small>· warn after {QUIET_DAYS} quiet days</small></b></div>
-                        <div class="kv"><span>Emails not understood</span><b>{account.state === "unread" ? Number(asset?.issue_count) || 1 : "None"}</b></div>
+                        <div class="kv"><span>Emails not understood</span><b>{mails.length || "None"}</b></div>
                         <div class="kv"><span>Rows since</span><b>{day(connection?.rows_since) || "The first email"}</b></div>
                     {:else}
                         <div class="kv"><span>Bank</span><b>{bankName}</b></div>
@@ -177,6 +215,13 @@
                     <div class="kv"><span>Counts in Available now</span><b>{account.frozen ? `Yes, as of ${day(asset?.synced_at, "d MMM")}` : "Yes"}</b></div>
                 </div>
             </section>
+
+            {#if email}
+                <section class="group" aria-label="Add a statement file">
+                    <div class="group-head"><h3>Earlier months</h3><span>From a statement</span></div>
+                    <StatementImport {assets} {today} />
+                </section>
+            {/if}
         </div>
     {/if}
     {#snippet footer()}
@@ -241,6 +286,12 @@
     .kv span { color: var(--stor-muted-text); }
     .kv b { font-weight: 500; color: var(--stor-ink); text-align: right; }
     .kv small { font-weight: 400; color: var(--stor-faint-text); }
+    .mail { border-top: 1px solid var(--stor-rule); }
+    .mail:first-child { border-top: 0; }
+    .mail .line { border-top: 0; }
+    .mail-open { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; padding: 8px 0; border: 0; background: transparent; text-align: left; color: inherit; }
+    .mail-open small { font-size: 12px; color: var(--stor-warning); }
+    .mail-text { max-height: 16rem; overflow: auto; margin: 0 0 12px; padding: 10px; border-radius: 10px; background: var(--stor-surface-muted); font: 12px/17px var(--stor-font-sans, inherit); white-space: pre-wrap; }
     .empty { margin: 0; padding: 14px 0; font-size: 13px; color: var(--stor-muted-text); }
     :global(.unlink) { color: var(--stor-negative) !important; }
 </style>

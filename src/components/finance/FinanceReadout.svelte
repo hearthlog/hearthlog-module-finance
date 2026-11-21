@@ -1,12 +1,13 @@
 <script lang="ts">
     import { differenceInCalendarDays, format, parseISO } from "date-fns";
-    import type { Asset, BankConnection } from "../../data/assets.js";
-    import { orderAccounts, overviewOf, summarizeAccount, type AccountSummary } from "../../finance/accounts.js";
+    import type { Asset, BankConnection, BankMail } from "../../data/assets.js";
+    import { orderAccounts, overviewOf, summarizeAccount, withUnreadMail, type AccountSummary } from "../../finance/accounts.js";
     import { removeAsset, saveHandKeptAsset } from "../../finance/account-commands.js";
     import { appClock, notify } from "@hearthlog/sdk/runtime";
     import AccountsStrip from "./AccountsStrip.svelte";
     import AccountDrawer from "./AccountDrawer.svelte";
     import AssetDrawer from "./AssetDrawer.svelte";
+    import LinkBankDrawer from "./LinkBankDrawer.svelte";
     import BankMark from "./BankMark.svelte";
     import type { TimelineOutlook } from "../../data/finance-timeline.js";
     import { parseFloor } from "../../finance/floor.js";
@@ -23,6 +24,7 @@
         assets,
         assetsSum,
         connections = [],
+        mails = [],
         onFloorChange,
         onJump,
         sheet = false,
@@ -35,6 +37,8 @@
         assetsSum: number;
         /** Links to banks: with one, the assets show as accounts with their state. */
         connections?: BankConnection[];
+        /** Mails set aside: unread ones show on their bank's account, a forwarding code in the linking step. */
+        mails?: BankMail[];
         onFloorChange: (value: number) => void;
         /** Scrolls the list to a day named in the readout. */
         onJump?: (date: string) => void;
@@ -58,16 +62,18 @@
     // Linked accounts: each asset's state from its own fields and its connection's. The clock is read with the
     // data, so stamps move whenever the page refreshes.
     const now = $derived.by(() => { void assets; void connections; return appClock.now(); });
-    const accounts = $derived.by<AccountSummary[]>(() => orderAccounts(assets.map((asset) =>
+    const accountAssets = $derived(withUnreadMail(assets, mails));
+    const accounts = $derived.by<AccountSummary[]>(() => orderAccounts(accountAssets.map((asset) =>
         summarizeAccount(asset, connections.find((connection) => connection.id === asset.connection_id) ?? null, now))));
-    const overview = $derived(overviewOf(accounts, assets, now));
+    const overview = $derived(overviewOf(accounts, accountAssets, now));
+    let linking = $state(false);
     const linked = $derived(overview.linked > 0);
 
     let openAccountId = $state<string | null>(null);
     let editingAssetId = $state<string | null>(null);
     let addingAsset = $state(false);
     const openAccount = $derived(accounts.find((account) => account.id === openAccountId) ?? null);
-    const openAsset = $derived(assets.find((asset) => asset.id === openAccountId) ?? null);
+    const openAsset = $derived(accountAssets.find((asset) => asset.id === openAccountId) ?? null);
     const editingAsset = $derived(assets.find((asset) => asset.id === editingAssetId) ?? null);
 
     function openFromStrip(account: AccountSummary): void {
@@ -180,13 +186,15 @@
     </div>
 {:else if assetsOpen && linked}
     <div id="finance-current-assets" class="shrink-0">
-        <AccountsStrip {accounts} onOpen={openFromStrip} onAdd={() => (addingAsset = true)} onUpdateAll={onUpdateAssets} />
+        <AccountsStrip {accounts} onOpen={openFromStrip} onAdd={() => (addingAsset = true)} onLink={() => (linking = true)} onUpdateAll={onUpdateAssets} />
     </div>
 {:else if assetsOpen}
     <div id="finance-current-assets" class="shrink-0">
-        <AssetView {assets} {assetsSum} onUpdateAll={onUpdateAssets} />
+        <AssetView {assets} {assetsSum} onUpdateAll={onUpdateAssets} onLink={() => (linking = true)} />
     </div>
 {/if}
+
+<LinkBankDrawer show={linking} {assets} {connections} {mails} {today} {assetsSum} onClose={() => (linking = false)} />
 
 {#if linked}
     <AccountDrawer
@@ -194,6 +202,8 @@
         account={openAccount}
         asset={openAsset}
         connection={connections.find((connection) => connection.id === openAsset?.connection_id) ?? null}
+        mails={mails.filter((mail) => mail.mail_kind === "unread" && !!openAsset && mail.connection_id === openAsset.connection_id)}
+        {assets}
         {today}
         {now}
         onClose={() => (openAccountId = null)}

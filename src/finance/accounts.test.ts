@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { orderAccounts, overviewOf, summarizeAccount, type AccountAsset, type AccountConnection } from './accounts.js';
+import { orderAccounts, overviewOf, summarizeAccount, withUnreadMail, type AccountAsset, type AccountConnection } from './accounts.js';
 
 /** The States board, row by row, from fields alone. */
 
@@ -112,5 +112,26 @@ describe('the readout over every account', () => {
     it('lists email accounts, then approvals, then hand-kept ones, each in its own order', () => {
         const shuffled = [accounts()[5]!, accounts()[4]!, accounts()[0]!, accounts()[2]!];
         expect(orderAccounts(shuffled).map((account) => account.name)).toEqual(['ČSOB Běžný účet', 'Air Bank', 'Revolut EUR', 'Cash']);
+    });
+});
+
+describe('mails Finance could not read', () => {
+    it('show on the bank’s first account, counted, and leave a gap in place', () => {
+        const assets: AccountAsset[] = [
+            linked({ id: 'one', connection_id: 'c1' }),
+            linked({ id: 'two', connection_id: 'c1' }),
+            linked({ id: 'air', connection_id: 'c2', sync_issue: 'balance_gap', issue_amount: -50 }),
+        ];
+        const result = withUnreadMail(assets, [
+            { connection_id: 'c1', mail_kind: 'unread', status: 'open' },
+            { connection_id: 'c1', mail_kind: 'unread', status: 'open' },
+            { connection_id: 'c1', mail_kind: 'unread', status: 'dismissed' },
+            { connection_id: 'c1', mail_kind: 'confirmation', status: 'open' },
+            { connection_id: 'c2', mail_kind: 'unread', status: 'open' },
+        ]);
+        expect(result.map((asset) => [asset.id, asset.sync_issue ?? '', asset.issue_count ?? 0])).toEqual([
+            ['one', 'unread_mail', 2], ['two', '', 0], ['air', 'balance_gap', 0],
+        ]);
+        expect(summarizeAccount(result[0]!, csob, NOW).stamp).toBe('2 emails to look at');
     });
 });

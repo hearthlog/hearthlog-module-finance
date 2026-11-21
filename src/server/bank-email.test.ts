@@ -26,7 +26,7 @@ interface Stored { type: string; payload: Record<string, unknown> }
 /** Enough of Ledger for one integration: versions per entity, the events as appended, idempotent request ids. */
 function fakeLedger() {
     const versions = new Map<string, number>();
-    const requests = new Set<string>();
+    const requests = new Map<string, string>();
     const events = new Map<string, Stored[]>();
     const integration: ServerIntegration = {
         id: 'bank-mail',
@@ -37,8 +37,13 @@ function fakeLedger() {
             const entityId = append.events[0]!.entityId;
             const live = versions.get(entityId);
             if (live !== undefined) append = await build(live);
-            if (requests.has(append.requestId)) return live === undefined ? 'created' : 'updated';
-            requests.add(append.requestId);
+            const body = JSON.stringify(append);
+            const seen = requests.get(append.requestId);
+            if (seen !== undefined) {
+                if (seen !== body) throw new Error('idempotency_mismatch');
+                return live === undefined ? 'created' : 'updated';
+            }
+            requests.set(append.requestId, body);
             versions.set(entityId, (live ?? 0) + 1);
             events.set(entityId, [...(events.get(entityId) ?? []), ...append.events.map((e) => ({ type: e.type, payload: e.payload }))]);
             return live === undefined ? 'created' : 'updated';
@@ -49,12 +54,12 @@ function fakeLedger() {
     return { integration, events, state };
 }
 
-function run(ledger: ReturnType<typeof fakeLedger>, store: ReturnType<typeof memoryBankState>, raw: string, domain: string | null) {
+function run(ledger: ReturnType<typeof fakeLedger>, store: ReturnType<typeof memoryBankState>, raw: string, domain: string | null, now = NOW) {
     const rejected: string[] = [];
     return handleBankMail({
         integration: ledger.integration,
         raw: bytes(raw),
-        now: NOW,
+        now,
         store,
         mailDomain: 'in.example.test',
         reject: (reason) => rejected.push(reason),
@@ -103,6 +108,16 @@ describe('ČSOB notification', () => {
         expect([...ledger.events.keys()].filter((key) => key.startsWith('transaction:'))).toHaveLength(1);
     });
 
+    it('handles a mail again later when its claim was forgotten, without a second row', async () => {
+        const ledger = fakeLedger();
+        await run(ledger, memoryBankState(), fixture('csob-payment.eml'), 'csob.cz');
+        // A fresh store (a released claim, a reset) and a later moment: the same entities, updated, not duplicated.
+        const again = await run(ledger, memoryBankState(), fixture('csob-payment.eml'), 'csob.cz', NOW + 60_000);
+        expect(again.kind).toBe('payment');
+        expect([...ledger.events.keys()].filter((key) => key.startsWith('transaction:'))).toHaveLength(1);
+        expect(ledger.events.get(`transaction:${again.kind === 'payment' ? again.transactionId : ''}`)!.map((e) => e.type)).toEqual(['TRANSACTION_ADDED', 'TRANSACTION_UPDATED']);
+    });
+
     it('follows the balance from mail to mail and puts a gap on the account when one went missing', async () => {
         const ledger = fakeLedger();
         const store = memoryBankState();
@@ -115,6 +130,20 @@ describe('ČSOB notification', () => {
         expect(gap).toMatchObject({ kind: 'payment', gap: -240 });
         const asset = ledger.state(`asset:${gap.kind === 'payment' ? gap.assetId : ''}`);
         expect(asset).toMatchObject({ amount: 2160, sync_issue: 'balance_gap', issue_amount: -240 });
+    });
+
+    it('adds a mail about an earlier moment as a row but leaves the newer balance', async () => {
+        const ledger = fakeLedger();
+        const store = memoryBankState();
+        const first = await run(ledger, store, fixture('csob-payment.eml'), 'csob.cz');
+        const assetId = first.kind === 'payment' ? first.assetId : '';
+        const before = ledger.events.get(`asset:${assetId}`)!.length;
+        // The same account a day earlier: delivered late.
+        const late = csobVariant('late', '-10,00 CZK', '+2=C2=A0759,50 CZK').replace('13.11.2026', '12.11.2026').replace('Fri, 13 Nov 2026 09:10', 'Thu, 12 Nov 2026 09:10');
+        const outcome = await run(ledger, store, late, 'csob.cz');
+        expect(outcome).toMatchObject({ kind: 'payment', gap: 0 });
+        expect(ledger.events.get(`asset:${assetId}`)!.length).toBe(before);
+        expect(ledger.state(`asset:${assetId}`).amount).toBe(2749.5);
     });
 
     it('does not trust a mail the bank did not sign, nor an account number that fails its checksum', async () => {

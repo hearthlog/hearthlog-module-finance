@@ -13,11 +13,13 @@
         accounts,
         onOpen,
         onAdd,
+        onLink,
         onUpdateAll,
     }: {
         accounts: AccountSummary[];
         onOpen: (account: AccountSummary) => void;
         onAdd: () => void;
+        onLink: () => void;
         /** Opens every hand-kept balance in one sheet. */
         onUpdateAll?: () => void;
     } = $props();
@@ -50,6 +52,7 @@
                     <button type="button" class="quiet" onclick={onUpdateAll}>Update balances</button>
                 {/if}
                 <button type="button" class="add" onclick={onAdd}><IconPlus class="h-3.5 w-3.5" />Add asset</button>
+                <button type="button" class="add" onclick={onLink}><IconPlus class="h-3.5 w-3.5" />Link a bank account</button>
             </span>
         </CommandOnly>
     </div>

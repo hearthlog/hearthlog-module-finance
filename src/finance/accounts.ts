@@ -251,3 +251,30 @@ export function orderAccounts(accounts: readonly AccountSummary[]): AccountSumma
         .sort((a, b) => rank(a.account) - rank(b.account) || a.index - b.index)
         .map(({ account }) => account);
 }
+
+/** The mail fields this reads. */
+export interface AccountMail {
+    connection_id?: string | null;
+    mail_kind: string;
+    status?: string | null;
+}
+
+/**
+ * Open mails Finance could not read belong to a bank, not to one account (it could not tell which). They show on the
+ * bank's first account (the oldest), as "N emails to look at", unless that account already has a gap to explain.
+ */
+export function withUnreadMail<T extends AccountAsset>(assets: readonly T[], mails: readonly AccountMail[]): T[] {
+    const unread = new Map<string, number>();
+    for (const mail of mails) {
+        if (mail.mail_kind !== 'unread' || (mail.status ?? 'open') !== 'open' || !mail.connection_id) continue;
+        unread.set(mail.connection_id, (unread.get(mail.connection_id) ?? 0) + 1);
+    }
+    const marked = new Set<string>();
+    return assets.map((asset) => {
+        const connection = asset.connection_id ?? '';
+        const count = unread.get(connection);
+        if (!count || marked.has(connection) || asset.link !== 'bank' || asset.sync_issue === 'balance_gap') return asset;
+        marked.add(connection);
+        return { ...asset, sync_issue: 'unread_mail', issue_count: count };
+    });
+}
