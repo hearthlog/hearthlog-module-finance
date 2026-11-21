@@ -149,7 +149,9 @@ describe('ČSOB notification', () => {
     it('does not trust a mail the bank did not sign, nor an account number that fails its checksum', async () => {
         const ledger = fakeLedger();
         const unsigned = await run(ledger, memoryBankState(), fixture('csob-payment.eml'), null);
-        expect(unsigned).toMatchObject({ kind: 'set-aside', reason: 'Not signed by ČSOB, so it was not trusted' });
+        expect(unsigned).toMatchObject({ kind: 'set-aside' });
+        // The record says why: what the signature check found and what the receiving server concluded.
+        expect(unsigned.kind === 'set-aside' && unsigned.reason).toMatch(/^Not signed by ČSOB, so it was not trusted\. Own check: no signature \(From domain csob\.cz\)\. No Authentication-Results header$/);
         const mail = ledger.state(`bank_mail:${unsigned.kind === 'set-aside' ? unsigned.mailId : ''}`);
         expect(mail).toMatchObject({ mail_kind: 'unread', status: 'open', bank: 'csob', subject: 'Moje info - Avízo' });
         expect(String(mail.body_text)).toContain('Example s.r.o.');
@@ -178,13 +180,27 @@ describe('forwarding confirmation', () => {
         const outcome = await run(ledger, memoryBankState(), fixture('gmail-confirmation.eml'), 'google.com');
         expect(outcome.kind).toBe('set-aside');
         const mail = ledger.state(`bank_mail:${outcome.kind === 'set-aside' ? outcome.mailId : ''}`);
-        expect(mail).toMatchObject({ mail_kind: 'confirmation', code: '123456789', status: 'open' });
+        expect(mail).toMatchObject({ mail_kind: 'confirmation', code: '123456789', status: 'open', reason: 'Forwarding confirmation' });
     });
 
-    it('does not show a code from an unsigned look-alike', async () => {
+    it('shows the code of an unverified one too, marked, since the mailbox checks it anyway', async () => {
         const ledger = fakeLedger();
         const outcome = await run(ledger, memoryBankState(), fixture('gmail-confirmation.eml'), null);
         const mail = ledger.state(`bank_mail:${outcome.kind === 'set-aside' ? outcome.mailId : ''}`);
-        expect(mail).toMatchObject({ mail_kind: 'unread', code: '' });
+        expect(mail).toMatchObject({ mail_kind: 'confirmation', code: '123456789' });
+        expect(String(mail.reason)).toMatch(/^Forwarding confirmation, signature not verified\. Own check: no signature/);
+    });
+});
+
+describe('why a signature was not trusted', () => {
+    it('names the failed check and the receiving server’s verdict', async () => {
+        const { describeSignatures } = await import('./mail/read-mail.js');
+        const { parseMail } = await import('./mail/mime.js');
+        const mail = parseMail(bytes('ARC-Authentication-Results: i=1; mx.cloudflare.net; dkim=pass header.d=google.com header.s=20230601; spf=pass smtp.mailfrom=google.com; dmarc=pass header.from=google.com\r\nFrom: a@google.com\r\n\r\nbody'));
+        const text = describeSignatures({
+            status: 'fail', fromDomain: 'google.com', best: null,
+            checks: [{ status: 'fail', domain: 'google.com', selector: '20230601', algorithm: 'rsa-sha256', canonicalization: 'relaxed/relaxed', signedHeaders: [], bodyHash: 'mismatch', alignedWithFrom: true, expired: false, reason: 'The body changed after the bank signed it' }],
+        }, mail);
+        expect(text).toBe('Own check: google.com (s=20230601, rsa-sha256, relaxed/relaxed): fail, The body changed after the bank signed it. Received with ARC-Authentication-Results by mx.cloudflare.net: dkim=pass google.com, spf=pass, dmarc=pass google.com');
     });
 });
