@@ -1,6 +1,6 @@
 {
   "name": "@hearthlog/module-finance",
-  "version": "1.3.10",
+  "version": "1.4.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
@@ -41,9 +41,9 @@
     "test": "hearthlog check-module"
   },
   "devDependencies": {
-    "@hearthlog/contracts": "^0.13.0",
-    "@hearthlog/sdk": "^0.13.0",
-    "@hearthlog/tooling": "^0.13.0",
+    "@hearthlog/contracts": "^0.13.14",
+    "@hearthlog/sdk": "^0.13.14",
+    "@hearthlog/tooling": "^0.13.14",
     "vitest": "^4.1.11"
   }
 }
