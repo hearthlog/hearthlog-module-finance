@@ -18,6 +18,9 @@ const BANKS: Record<string, BankInfo> = {
     revolut: { id: 'revolut', name: 'Revolut', mark: 'RE', provider: 'enable_banking' },
 };
 
+/** Every bank Finance links, in the order the linking step lists them. */
+export const BANK_LIST: readonly BankInfo[] = Object.values(BANKS);
+
 export function bankInfo(id: string | null | undefined): BankInfo | null {
     return id ? BANKS[id] ?? null : null;
 }

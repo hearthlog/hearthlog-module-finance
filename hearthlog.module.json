@@ -79,12 +79,35 @@
   ],
   "attention": "./src/attention.ts",
   "server": {
-    "entry": "./src/server/index.ts"
+    "entry": "./src/server/index.ts",
+    "routes": [
+      "/api/finance/bank"
+    ],
+    "bindings": [
+      {
+        "binding": "FINANCE_BANK_STATE",
+        "type": "durable-object",
+        "className": "FinanceBankState"
+      }
+    ],
+    "vars": [
+      {
+        "name": "FINANCE_MAIL_DOMAIN",
+        "setting": "mailDomain",
+        "optional": true
+      }
+    ]
   },
   "refreshKeys": [
     "app:transactions",
     "app:assets",
     "app:budgets"
   ],
-  "styles": "./src/styles.css"
+  "styles": "./src/styles.css",
+  "integrationKinds": [
+    {
+      "kind": "bank-email",
+      "feature": "finance"
+    }
+  ]
 }

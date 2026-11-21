@@ -164,6 +164,33 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
     },
     {
+        // A forwarded mail Finance set aside: one it could not read (shown as it came, never guessed), or the
+        // mailbox's forwarding confirmation, whose code the linking step shows. Keeps the text, never the raw mail.
+        name: "bank_mail",
+        feature: "finance",
+        displayName: "Bank mail",
+        table: "bank_mails",
+        fields: [
+            // The integration (forwarding address) it came to, and the connection of the bank it claims to be from.
+            { name: "integration_id", type: "string", payloadKey: "integration_id", default: "" },
+            { name: "connection_id", type: "string", payloadKey: "connection_id", default: "" },
+            { name: "bank", type: "string", payloadKey: "bank", default: "" },
+            // `unread` or `confirmation`.
+            { name: "mail_kind", type: "string", payloadKey: "mail_kind", required: true },
+            // `open` until the user enters the row, dismisses it, or (confirmation) the link works.
+            { name: "status", type: "string", payloadKey: "status", default: "open" },
+            { name: "from_address", type: "string", payloadKey: "from_address", default: "" },
+            { name: "subject", type: "string", payloadKey: "subject", default: "" },
+            { name: "received_at", type: "datetime", payloadKey: "received_at", default: null },
+            { name: "reason", type: "string", payloadKey: "reason", default: "" },
+            { name: "code", type: "string", payloadKey: "code", default: "" },
+            { name: "body_text", type: "string", payloadKey: "body_text", default: "" },
+        ],
+        indexes: [
+            { name: "idx_bank_mails_scope_status", columns: ["tenant_id", "log_id", "status", "received_at"] },
+        ],
+    },
+    {
         name: "budget_plan",
         feature: "finance",
         displayName: "Budget plan",
