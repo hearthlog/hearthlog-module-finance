@@ -48,6 +48,7 @@
     import { runMatchingPass } from "../finance/matching-pass.js";
     import { confirmPlan, declinePlan, run as runReview } from "../finance/review-commands.js";
     import ReviewSheet from "../components/finance/ReviewSheet.svelte";
+    import { approvalErrorText, refreshBankApprovals, takeApprovalReturn } from "../finance/bank-approval.js";
     import { bankInfo } from "../finance/banks.js";
 
     type TransactionDrawerComponent = typeof import("../components/finance/TransactionDrawer.svelte").default;
@@ -69,6 +70,24 @@
         mark: bankInfo(view.connections.find((connection) => connection.id === asset.connection_id)?.bank)?.mark ?? "",
     }])));
     provideRowAccounts(() => rowAccountMap);
+
+    // Opening Finance fetches bank approvals once (the user is present, so it does not count against the bank's daily
+    // limit; the gateway allows one per five minutes). A return from the bank says how linking went.
+    let approvalsRefreshed = false;
+    $effect(() => {
+        if (!browser || approvalsRefreshed || !view.connections.some((connection) => connection.provider === "enable_banking" && connection.status !== "expired")) return;
+        approvalsRefreshed = true;
+        void refreshBankApprovals();
+    });
+    $effect(() => {
+        if (!browser) return;
+        const url = new URL(page.url);
+        const returned = takeApprovalReturn(url);
+        if (!returned) return;
+        if ("linked" in returned) notify.success(`${returned.linked === "revolut" ? "Revolut" : "The bank"} is linked; its accounts appear in a moment`);
+        else notify.error(approvalErrorText(returned.error));
+        void goto(`${url.pathname}${url.search}`, { replaceState: true, noScroll: true, keepFocus: true });
+    });
 
     // New bank rows are checked against the plans as soon as they are here; a match pauses its plan.
     let reviewOpen = $state(false);

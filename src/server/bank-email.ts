@@ -62,7 +62,7 @@ function event(type: string, entityId: string, base: number | undefined, now: nu
  * was handled: a retry inside one handling repeats them exactly, while handling the same mail again later (a released
  * claim, a redelivery) sends new ones, which Ledger would otherwise refuse as the same request with another body.
  */
-async function upsert(
+export async function upsert(
     integration: ServerIntegration,
     entity: string,
     id: string,

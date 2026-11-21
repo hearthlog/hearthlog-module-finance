@@ -11,6 +11,7 @@
     import { categoryLabel } from "../../finance/categories.js";
     import BankMark from "./BankMark.svelte";
     import StatementImport from "./StatementImport.svelte";
+    import { refreshBankApprovals, startBankApproval } from "../../finance/bank-approval.js";
 
     /** One linked account: its balance and how fresh it is, what needs a look, this month's rows, and the connection. */
     let {
@@ -94,6 +95,27 @@
     }
 
     let openMailId = $state<string | null>(null);
+    let fetching = $state(false);
+
+    async function refresh(): Promise<void> {
+        fetching = true;
+        try {
+            await refreshBankApprovals();
+            notify.success(`Asked ${bankName} for the latest`);
+        } finally {
+            fetching = false;
+        }
+    }
+
+    async function renew(): Promise<void> {
+        fetching = true;
+        try {
+            await startBankApproval(account?.bank?.id ?? "revolut");
+        } catch (error) {
+            fetching = false;
+            notify.error(error instanceof Error ? error.message : "The bank could not be reached");
+        }
+    }
 
     async function dismiss(mail: BankMail): Promise<void> {
         try {
@@ -153,8 +175,10 @@
                 <p class="note warn">{bankName} allows a few background fetches a day; the next one is at {day(connection?.next_try_at, "HH:mm")}. Refreshing still works while you are in the app, because that fetch counts as yours.</p>
             {:else if account.state === "renew"}
                 <p class="note warn">The approval at {bankName} ends on {day(connection?.valid_until, "d MMM")}. Renewing goes to {bankName} and back; until then everything keeps syncing.</p>
+                <CommandOnly><Button size="sm" disabled={fetching} onclick={renew}>Renew at {bankName}</Button></CommandOnly>
             {:else if account.state === "expired"}
                 <p class="note negative">The approval at {bankName} has ended. The balance is frozen as of {day(asset?.synced_at, "d MMM")} and still counts in Available now, marked as old, until you renew or type it by hand.</p>
+                <CommandOnly><Button size="sm" disabled={fetching} onclick={renew}>Renew at {bankName}</Button></CommandOnly>
             {:else if account.state === "error"}
                 <p class="note negative">{connection?.last_error || "The provider reported an error."}</p>
             {/if}
@@ -211,6 +235,9 @@
                         <div class="kv"><span>Approval valid until</span><b>{day(connection?.valid_until) || "Unknown"}</b></div>
                         <div class="kv"><span>Last sync</span><b>{ago(asset?.synced_at, now)}</b></div>
                         <div class="kv"><span>Background fetches</span><b>About 4 a day <small>· more while you are in the app</small></b></div>
+                        {#if !account.frozen}
+                            <div class="kv"><span>Fetch now</span><CommandOnly><Button size="sm" variant="secondary" disabled={fetching} onclick={refresh}>Refresh {bankName}</Button></CommandOnly></div>
+                        {/if}
                     {/if}
                     <div class="kv"><span>Counts in Available now</span><b>{account.frozen ? `Yes, as of ${day(asset?.synced_at, "d MMM")}` : "Yes"}</b></div>
                 </div>

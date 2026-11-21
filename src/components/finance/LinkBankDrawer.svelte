@@ -9,6 +9,7 @@
     import { kindLabel } from "../../finance/accounts.js";
     import { BANK_LIST, type BankInfo } from "../../finance/banks.js";
     import BankMark from "./BankMark.svelte";
+    import { startBankApproval } from "../../finance/bank-approval.js";
     import StatementImport from "./StatementImport.svelte";
 
     /**
@@ -44,6 +45,9 @@
     let openedAt = $state("");
     let addresses = $state<Array<{ integrationId: string; address: string }> | null>(null);
     let addressError = $state("");
+    /** The site has the Enable Banking secrets and an approval integration. */
+    let approvalReady = $state(false);
+    let leaving = $state(false);
     let replaceId = $state("");
     let kind = $state("current");
     let busy = $state(false);
@@ -73,8 +77,9 @@
         void fetch("/api/finance/bank/v1/addresses", { credentials: "same-origin", headers: { Accept: "application/json" } })
             .then(async (response) => {
                 if (!response.ok) throw new Error(String(response.status));
-                const body = await response.json() as { addresses: Array<{ integrationId: string; address: string }>; configured: boolean };
+                const body = await response.json() as { addresses: Array<{ integrationId: string; address: string }>; configured: boolean; approval?: boolean };
                 addresses = body.addresses;
+                approvalReady = !!body.approval;
                 if (!body.configured) addressError = "This site has no mail subdomain yet. It needs a domain on Cloudflare with Email Routing sending a subdomain's mail to the site (see Finance's setup notes).";
                 else if (!body.addresses.length) addressError = "No bank mail integration is configured for this site yet.";
             })
@@ -135,16 +140,19 @@
         {#if step === 1}
             <div class="options" role="radiogroup" aria-label="Bank">
                 {#each BANK_LIST as option (option.id)}
-                    {@const ready = option.provider === "email"}
+                    {@const ready = option.provider === "email" || approvalReady}
                     <label class="option" class:disabled={!ready}>
                         <input type="radio" name="bank" value={option.id} bind:group={bankId} disabled={!ready} />
                         <BankMark mark={option.mark} size="lg" />
-                        <span class="stack"><b>{option.name}</b><small>{ready ? "By notification email · within minutes" : "By bank approval · comes next"}</small></span>
+                        <span class="stack"><b>{option.name}</b><small>{option.provider === "email" ? "By notification email · within minutes" : ready ? "By bank approval · about 4 times a day" : "By bank approval · not set up for this site"}</small></span>
                     </label>
                 {/each}
                 <div class="option disabled"><BankMark size="lg" /><span class="stack"><b>Česká spořitelna, Fio and other banks</b><small>Later, one bank at a time</small></span></div>
             </div>
             <p class="note">Finance only reads. It cannot pay or move money, and it never asks for your bank password.</p>
+        {:else if step === 2 && bank.provider === "enable_banking"}
+            <p><b>Approve read access at {bank.name}.</b> You go to {bank.name}, sign in there and choose which accounts Finance may read; then you come back here and the accounts appear with their balances and recent rows.</p>
+            <p class="note">The approval lasts as long as {bank.name} allows (up to 180 days) and can be renewed. Finance fetches about four times a day, and once more whenever you open it.</p>
         {:else if step === 2}
             <p>{INSTRUCTIONS[bank.id] ?? ""}</p>
             <div class="stack gap">
@@ -204,6 +212,11 @@
         {#if step > 1 && step < 4}<Button variant="secondary" size="sm" onclick={() => (step -= 1)}>Back</Button>{/if}
         {#if step === 1}
             <Button size="sm" onclick={() => (step = 2)}>Continue with {bank.name}</Button>
+        {:else if step === 2 && bank.provider === "enable_banking"}
+            <Button size="sm" disabled={leaving} onclick={async () => {
+                leaving = true;
+                try { await startBankApproval(bank.id); } catch (error) { leaving = false; notify.error(error instanceof Error ? error.message : "The bank could not be reached"); }
+            }}>{leaving ? `Opening ${bank.name}…` : `Approve at ${bank.name}`}</Button>
         {:else if step === 2}
             <Button size="sm" disabled={!arrived} onclick={() => (step = 3)}>Continue</Button>
         {:else if step === 3}

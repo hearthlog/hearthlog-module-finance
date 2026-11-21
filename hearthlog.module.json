@@ -96,6 +96,15 @@
         "setting": "mailDomain",
         "optional": true
       }
+    ],
+    "hourly": true,
+    "secrets": [
+      {
+        "name": "FINANCE_EB_APP_ID"
+      },
+      {
+        "name": "FINANCE_EB_PRIVATE_KEY"
+      }
     ]
   },
   "refreshKeys": [
@@ -107,6 +116,10 @@
   "integrationKinds": [
     {
       "kind": "bank-email",
+      "feature": "finance"
+    },
+    {
+      "kind": "bank-approval",
       "feature": "finance"
     }
   ]
