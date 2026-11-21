@@ -100,10 +100,12 @@
     "hourly": true,
     "secrets": [
       {
-        "name": "FINANCE_EB_APP_ID"
+        "name": "FINANCE_EB_APP_ID",
+        "optional": true
       },
       {
-        "name": "FINANCE_EB_PRIVATE_KEY"
+        "name": "FINANCE_EB_PRIVATE_KEY",
+        "optional": true
       }
     ]
   },
