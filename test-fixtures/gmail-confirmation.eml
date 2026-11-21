@@ -1,0 +1,11 @@
+Date: Sat, 21 Nov 2026 10:00:00 +0000
+From: Gmail Team <forwarding-noreply@google.com>
+To: bank-mail@in.example.test
+Message-ID: <synthetic-confirmation@example.invalid>
+Subject: (#123456789) Gmail Forwarding Confirmation - Receive Mail from someone@example.com
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+
+someone@example.com has requested to automatically forward mail to your email address bank-mail@in.example.test.
+
+Confirmation code: 123456789

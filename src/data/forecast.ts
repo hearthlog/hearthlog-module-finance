@@ -2,6 +2,7 @@ import type { ReadModelSession } from '@hearthlog/sdk/data';
 import { withTimeout } from '@hearthlog/sdk/data';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
 import { sql } from 'kysely';
+import { countsInForecast } from './counting.js';
 
 export type ForecastPoint = { date: string; amount: number };
 
@@ -57,7 +58,7 @@ function forecastRowsQuery(
         daily_plans AS (
             SELECT substr(trim(due_date), 1, 10) AS day, SUM(amount) AS amount
             FROM ${session.table('transactions')} AS transactions
-            WHERE transaction_status = 'active'
+            WHERE ${countsInForecast(session, 'transactions')}
                 AND due_date >= ${today}
                 AND due_date <= ${horizonEnd}
             GROUP BY substr(trim(due_date), 1, 10)
@@ -120,7 +121,7 @@ function monthForecastRowsQuery(
         daily_plans AS (
             SELECT substr(trim(due_date), 1, 10) AS day, SUM(amount) AS amount
             FROM ${session.table('transactions')} AS transactions
-            WHERE transaction_status = 'active'
+            WHERE ${countsInForecast(session, 'transactions')}
                 AND due_date >= ${today}
                 AND due_date <= ${horizonEnd}
             GROUP BY substr(trim(due_date), 1, 10)
@@ -229,7 +230,7 @@ export function createForecastRepository(session: ReadModelSession) {
                     FROM ${session.table('transactions')} AS transactions
                     WHERE
                         (due_date >= ${yearStart} AND due_date <= ${pastEnd})
-                        OR (transaction_status = 'active' AND due_date > ${pastEnd} AND due_date <= ${yearEnd})
+                        OR (${countsInForecast(session, 'transactions')} AND due_date > ${pastEnd} AND due_date <= ${yearEnd})
                     GROUP BY substr(trim(due_date), 1, 10)
                 ),
                 balance AS (

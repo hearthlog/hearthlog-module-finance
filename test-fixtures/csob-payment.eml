@@ -1,0 +1,27 @@
+Date: Fri, 13 Nov 2026 09:10:00 +0100 (CET)
+From: =?UTF-8?Q?=C4=8CSOB?= <noreply@csob.cz>
+To: someone@example.com
+Message-ID: <synthetic-1@example.invalid>
+Subject: =?utf-8?Q?Moje_info_-_Av=C3=ADzo?=
+MIME-Version: 1.0
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+<html><body><table><tr><td>
+<p><br />dne 13.11.2026 byla na =C3=BA=C4=8Dtu 123456702 za=C3=BA=C4=8D=
+tov=C3=A1na transakce typu: Odchoz=C3=AD =C3=BAhrada.</p>
+<table>
+<tr><td>=C3=9A=C4=8Det</td><td>123456702/0300</td></tr>
+<tr><td>=C3=9A=C4=8Det protistrany</td><td>123456710/0800</td></tr>
+<tr><td>N=C3=A1zev protistrany</td><td>Example s.r.o.</td></tr>
+<tr><td>Datum =C3=BA=C4=8Dtov=C3=A1n=C3=AD</td><td>13.11.2026</td></tr>
+<!--
+<tr><td>Kurz</td><td>25,10</td></tr>
+-->
+<tr><td>=C4=8C=C3=A1stka</td><td>-1=C2=A0250,50 CZK</td></tr>
+<tr><td>Variabiln=C3=AD symbol</td><td>42</td></tr>
+<tr><td>Nov=C3=A9 pole</td><td>something new</td></tr>
+</table>
+<p><br />Z=C5=AFstatek na =C3=BA=C4=8Dtu po za=C3=BA=C4=8Dtov=C3=A1n=C3=
+=AD transakce: +2=C2=A0749,50 CZK.</p>
+</td></tr></table></body></html>

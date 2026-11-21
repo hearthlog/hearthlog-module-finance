@@ -1,6 +1,6 @@
 import { deferPage, type PagePublisher } from '@hearthlog/sdk/runtime';
 import type { ModuleLoadEvent } from '@hearthlog/sdk/runtime';
-import type { Asset } from '../data/assets.js';
+import type { Asset, BankConnection, BankMail } from '../data/assets.js';
 import type { BudgetItem } from '@hearthlog/sdk/data';
 import type { BudgetItemSort, BudgetPlanSummary } from '../data/budgets.js';
 import type { BalanceRange, TimelineOutlook } from '../data/finance-timeline.js';
@@ -21,6 +21,12 @@ export interface FinancePageData {
     floor: number;
     assets: Asset[];
     assetsSum: number;
+    /** Links to banks; a linked asset's state comes from its connection. */
+    connections: BankConnection[];
+    /** Mails set aside that wait for the user: unread ones and forwarding confirmation codes. */
+    mails: BankMail[];
+    /** Bank rows waiting for review, and how many were not yet checked against the plans. */
+    review: { pending: number; unmatched: number };
     budgetPlans: BudgetPlanSummary[];
     budgetIncomeItems: BudgetItem[];
     budgetExpenseItems: BudgetItem[];
@@ -39,6 +45,9 @@ function emptyData(year: number, month: number): FinancePageData {
         floor: 0,
         assets: [],
         assetsSum: 0,
+        connections: [],
+        mails: [],
+        review: { pending: 0, unmatched: 0 },
         budgetPlans: [],
         budgetIncomeItems: [],
         budgetExpenseItems: [],
@@ -53,7 +62,7 @@ const loadData = async (
     publish: PagePublisher<FinancePageData>,
 ): Promise<FinancePageData> => {
     // The layout's load supplies the assets; the route loader receives untyped parent data.
-    const { assetsData } = await parent() as { assetsData: Promise<{ assets: Asset[]; assetsSum: number }> };
+    const { assetsData } = await parent() as { assetsData: Promise<{ assets: Asset[]; assetsSum: number; connections: BankConnection[]; mails: BankMail[] }> };
     const assetsReady = assetsData.then((value) => { publish(value, 'assets'); return value; });
     void assetsReady.catch(() => undefined);
     const now = await appClock.ready();
@@ -65,13 +74,14 @@ const loadData = async (
 
     // The endless views read the months and weeks that scroll into view on
     // their own; the page loads what spans all of them.
-    const [{ assets, assetsSum }, floor, result] = await Promise.all([
+    const [{ assets, assetsSum, connections, mails }, floor, result] = await Promise.all([
         assetsReady,
         loadBalanceFloor(),
         queryDatabase(async (repositories) => {
-            const [outlook, range, budgetPlans] = await Promise.all([
+            const [outlook, range, review, budgetPlans] = await Promise.all([
                 repositories.timeline.getOutlook({ today }),
                 repositories.timeline.getRange({ today }),
+                repositories.transactions.countReview(),
                 isBudgetTab ? repositories.budgets.getPlans() : Promise.resolve([] as BudgetPlanSummary[]),
             ]);
             const selectedPlan = budgetPlans.find((plan) => plan.id === requestedPlanId) ?? budgetPlans[0];
@@ -81,11 +91,11 @@ const loadData = async (
                     repositories.budgets.getPlanItems(selectedPlan.id, 'expense', expenseSort),
                 ])
                 : [[], []];
-            return { outlook, range, budgetPlans, budgetIncomeItems, budgetExpenseItems, selectedPlanId: selectedPlan ? selectedPlan.id : null };
+            return { outlook, range, review, budgetPlans, budgetIncomeItems, budgetExpenseItems, selectedPlanId: selectedPlan ? selectedPlan.id : null };
         }),
     ]);
 
-    return { year: Number(params.year ?? 0), month: Number(params.month ?? 0), today, floor, assets, assetsSum, incomeSort, expenseSort, ...result };
+    return { year: Number(params.year ?? 0), month: Number(params.month ?? 0), today, floor, assets, assetsSum, connections, mails, incomeSort, expenseSort, ...result };
 };
 
 export const load = (event: ModuleLoadEvent) => {

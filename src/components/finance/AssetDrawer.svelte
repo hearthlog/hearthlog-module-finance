@@ -14,11 +14,14 @@
         asset = null,
         onClose,
         onSave,
+        onDelete,
     }: {
         show: boolean;
         asset?: Asset | null;
         onClose: () => void;
         onSave: (draft: { name: string; amount: number }) => Promise<void>;
+        /** Offered while editing, where no list row carries a delete action (the accounts strip). */
+        onDelete?: () => Promise<void>;
     } = $props();
 
     let name = $state("");
@@ -122,6 +125,9 @@
 
         </form>
     {#snippet footer()}
+            {#if asset && onDelete}
+                <Button variant="secondary" size="sm" class="mr-auto text-[var(--stor-negative)]" onclick={() => void onDelete()} disabled={saving}>Delete</Button>
+            {/if}
             <Button variant="secondary" size="sm" onclick={onClose} disabled={saving}>
                 Cancel
             </Button>

@@ -1,8 +1,8 @@
-import type { Asset } from '@hearthlog/sdk/data';
+import type { Asset, BankConnection, BankMail } from '@hearthlog/sdk/data';
 import type { ReadModelSession } from '@hearthlog/sdk/data';
 import { withTimeout } from '@hearthlog/sdk/data';
 
-export type { Asset };
+export type { Asset, BankConnection, BankMail };
 
 const DB_TIMEOUT_MS = 5000;
 
@@ -30,6 +30,34 @@ export function createAssetRepository(session: ReadModelSession) {
                 'getSumOfAssetsByType query timed out',
             );
             return Number(result?.sum ?? 0);
+        },
+
+        /** Every link to a bank, oldest first; the accounts strip reads each linked asset's state from its connection. */
+        getBankConnections(): Promise<BankConnection[]> {
+            return withTimeout(
+                session.selectFrom('bank_connections')
+                    .selectAll()
+                    .orderBy('created_at', 'asc')
+                    .orderBy('id', 'asc')
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'getBankConnections query timed out',
+            );
+        },
+
+        /** Mails set aside that still wait for the user (unread ones, forwarding codes), newest first. */
+        getOpenBankMails(): Promise<BankMail[]> {
+            return withTimeout(
+                session.selectFrom('bank_mails')
+                    .selectAll()
+                    .where('status', '=', 'open')
+                    .orderBy('received_at', 'desc')
+                    .orderBy('id', 'asc')
+                    .limit(100)
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'getOpenBankMails query timed out',
+            );
         },
 
         getAssetsByType(assetType: string): Promise<Asset[]> {

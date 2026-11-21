@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "org.stor.finance",
   "package": "@hearthlog/module-finance",
-  "version": "1.3.10",
+  "version": "1.4.0",
   "compatibility": {
     "moduleApi": 1
   },
@@ -73,18 +73,56 @@
     "definitions": "./src/data/definitions.ts",
     "repositories": "./src/data/repositories.ts"
   },
-  "projectionVersion": 1,
+  "projectionVersion": 2,
   "aiCapabilities": [
     "category-pick"
   ],
   "attention": "./src/attention.ts",
   "server": {
-    "entry": "./src/server/index.ts"
+    "entry": "./src/server/index.ts",
+    "routes": [
+      "/api/finance/bank"
+    ],
+    "bindings": [
+      {
+        "binding": "FINANCE_BANK_STATE",
+        "type": "durable-object",
+        "className": "FinanceBankState"
+      }
+    ],
+    "vars": [
+      {
+        "name": "FINANCE_MAIL_DOMAIN",
+        "setting": "mailDomain",
+        "optional": true
+      }
+    ],
+    "hourly": true,
+    "secrets": [
+      {
+        "name": "FINANCE_EB_APP_ID",
+        "optional": true
+      },
+      {
+        "name": "FINANCE_EB_PRIVATE_KEY",
+        "optional": true
+      }
+    ]
   },
   "refreshKeys": [
     "app:transactions",
     "app:assets",
     "app:budgets"
   ],
-  "styles": "./src/styles.css"
+  "styles": "./src/styles.css",
+  "integrationKinds": [
+    {
+      "kind": "bank-email",
+      "feature": "finance"
+    },
+    {
+      "kind": "bank-approval",
+      "feature": "finance"
+    }
+  ]
 }

@@ -1,5 +1,6 @@
 import { sql } from 'kysely';
 import { withTimeout, type ReadModelSession } from '@hearthlog/sdk/data';
+import { isPaused } from './counting.js';
 
 const DB_TIMEOUT_MS = 5000;
 
@@ -19,7 +20,7 @@ function toCount(value: number | string | null | undefined): number {
 
 export function createPlannedDaysRepository(session: ReadModelSession) {
     return {
-        /** Plans (active transactions) per day in `[from, until]`: how many, their net, and the largest names. */
+        /** Plans (active transactions) per day in `[from, until]`: how many, their net, and the largest names. A plan that looks paid is left out. */
         async plannedDays(from: string, until: string, limit: number): Promise<PlannedDay[]> {
             const result = await withTimeout(
                 session.execute(sql<{ day: string; count: number | string; total: number | string | null; names: string | null }>`
@@ -33,6 +34,7 @@ export function createPlannedDaysRepository(session: ReadModelSession) {
                             ) AS pos
                         FROM ${session.table('transactions')} AS t
                         WHERE t.transaction_status = 'active'
+                            AND NOT ${isPaused(session, 't')}
                             AND SUBSTR(TRIM(t.due_date), 1, 10) >= ${from}
                             AND SUBSTR(TRIM(t.due_date), 1, 10) <= ${until}
                     ), ranked AS (SELECT * FROM planned ORDER BY day, pos)

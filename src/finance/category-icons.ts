@@ -11,6 +11,7 @@ import IconLeisure from '~icons/mdi/ticket-outline';
 import IconKids from '~icons/mdi/baby-face-outline';
 import IconGifts from '~icons/mdi/gift-outline';
 import IconOther from '~icons/mdi/dots-horizontal-circle-outline';
+import IconTransfer from '~icons/mdi/swap-horizontal';
 
 const ICONS: Record<string, Component> = {
     income: IconIncome,
@@ -24,6 +25,7 @@ const ICONS: Record<string, Component> = {
     kids: IconKids,
     gifts: IconGifts,
     other: IconOther,
+    transfer: IconTransfer,
 };
 
 /** The line icon a category draws in its row's tile; uncategorized rows get a plain tag. */

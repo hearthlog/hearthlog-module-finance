@@ -2,6 +2,7 @@ import type { Transaction } from '@hearthlog/sdk/data';
 import type { ReadModelSession } from '@hearthlog/sdk/data';
 import { withTimeout } from '@hearthlog/sdk/data';
 import { sql } from 'kysely';
+import { countsInForecast, isTransfer } from './counting.js';
 
 export type { Transaction };
 
@@ -180,15 +181,19 @@ export function createTransactionRepository(session: ReadModelSession) {
                     past_due_count: number | string | null;
                     archived_count: number | string | null;
                 }>`
+                    WITH flagged AS (
+                        SELECT transactions.*, CASE WHEN ${countsInForecast(session, 'transactions')} THEN 1 ELSE 0 END AS counts
+                        FROM ${session.table('transactions')} AS transactions
+                    )
                     SELECT
-                        SUM(CASE WHEN transaction_status = 'active' AND due_date >= ${today} AND due_date <= ${endDate} AND amount > 0 THEN amount ELSE 0 END) AS planned_income,
-                        SUM(CASE WHEN transaction_status = 'active' AND due_date >= ${today} AND due_date <= ${endDate} AND amount < 0 THEN -amount ELSE 0 END) AS planned_expenses,
-                        SUM(CASE WHEN transaction_status = 'active' AND due_date >= ${today} AND due_date <= ${endDate} THEN amount ELSE 0 END) AS planned_flow,
+                        SUM(CASE WHEN counts = 1 AND due_date >= ${today} AND due_date <= ${endDate} AND amount > 0 THEN amount ELSE 0 END) AS planned_income,
+                        SUM(CASE WHEN counts = 1 AND due_date >= ${today} AND due_date <= ${endDate} AND amount < 0 THEN -amount ELSE 0 END) AS planned_expenses,
+                        SUM(CASE WHEN counts = 1 AND due_date >= ${today} AND due_date <= ${endDate} THEN amount ELSE 0 END) AS planned_flow,
                         SUM(CASE WHEN transaction_status = 'active' AND due_date >= ${today} AND due_date <= ${endDate} THEN 1 ELSE 0 END) AS planned_count,
                         COUNT(DISTINCT CASE WHEN transaction_status = 'active' AND due_date >= ${today} AND due_date <= ${endDate} THEN substr(trim(due_date), 1, 10) END) AS planned_day_count,
                         SUM(CASE WHEN transaction_status = 'active' AND due_date < ${today} THEN 1 ELSE 0 END) AS past_due_count,
                         SUM(CASE WHEN transaction_status = 'archived' THEN 1 ELSE 0 END) AS archived_count
-                    FROM ${session.table('transactions')} AS transactions
+                    FROM flagged
                 `),
                 DB_TIMEOUT_MS,
                 'Planning summary query timed out',
@@ -210,7 +215,7 @@ export function createTransactionRepository(session: ReadModelSession) {
                 session.selectFrom('transactions')
                     .select(({ fn }) => fn.sum('amount').as('total_amount'))
                     .where('due_date', '<', date)
-                    .where('transaction_status', '=', 'active')
+                    .where(countsInForecast(session, 'transactions'))
                     .executeTakeFirst(),
                 DB_TIMEOUT_MS,
                 'getSumOfTransactionAmountsUpToDate timed out',
@@ -273,7 +278,7 @@ export function createTransactionRepository(session: ReadModelSession) {
                     daily AS (
                         SELECT substr(trim(due_date), 1, 10) AS day, SUM(amount) AS amount
                         FROM ${session.table('transactions')} AS transactions
-                        WHERE transaction_status = 'active'
+                        WHERE ${countsInForecast(session, 'transactions')}
                             AND due_date >= ${startDate}
                             AND due_date <= ${endDate}
                         GROUP BY day
@@ -308,14 +313,18 @@ export function createTransactionRepository(session: ReadModelSession) {
                     active_day_count: number | string | null;
                     archived_count: number | string | null;
                 }>`
+                    WITH flagged AS (
+                        SELECT transactions.*, CASE WHEN ${countsInForecast(session, 'transactions')} THEN 1 ELSE 0 END AS counts
+                        FROM ${session.table('transactions')} AS transactions
+                    )
                     SELECT
-                        SUM(CASE WHEN transaction_status = 'active' AND amount > 0 THEN amount ELSE 0 END) AS income_total,
-                        SUM(CASE WHEN transaction_status = 'active' AND amount < 0 THEN -amount ELSE 0 END) AS expense_total,
-                        SUM(CASE WHEN transaction_status = 'active' THEN amount ELSE 0 END) AS month_flow,
+                        SUM(CASE WHEN counts = 1 AND amount > 0 THEN amount ELSE 0 END) AS income_total,
+                        SUM(CASE WHEN counts = 1 AND amount < 0 THEN -amount ELSE 0 END) AS expense_total,
+                        SUM(CASE WHEN counts = 1 THEN amount ELSE 0 END) AS month_flow,
                         SUM(CASE WHEN transaction_status = 'active' THEN 1 ELSE 0 END) AS active_transaction_count,
                         COUNT(DISTINCT CASE WHEN transaction_status = 'active' THEN substr(trim(due_date), 1, 10) END) AS active_day_count,
                         SUM(CASE WHEN transaction_status = 'archived' THEN 1 ELSE 0 END) AS archived_count
-                    FROM ${session.table('transactions')} AS transactions
+                    FROM flagged
                     WHERE due_date >= ${startDate}
                         AND due_date <= ${endDate}
                 `),
@@ -437,6 +446,7 @@ export function createTransactionRepository(session: ReadModelSession) {
                 session.selectFrom('transactions')
                     .select(['transaction_category as category', ({ fn }) => fn.countAll().as('uses')])
                     .where(sql<boolean>`COALESCE(transaction_category, '') NOT IN ('', 'unknown')`)
+                    .where(sql<boolean>`NOT ${isTransfer('transactions')}`)
                     .where(sql<boolean>`substr(trim(due_date), 1, 10) >= ${since}`)
                     .where(direction === 'income' ? sql<boolean>`amount > 0` : sql<boolean>`amount < 0`)
                     .groupBy('transaction_category')
@@ -448,6 +458,153 @@ export function createTransactionRepository(session: ReadModelSession) {
                 'Top categories query timed out',
             );
             return rows.map((row) => String(row.category));
+        },
+
+        /** Bank rows nobody has reviewed yet, oldest first (the review sheet). */
+        getReviewRows(limit = 500): Promise<Transaction[]> {
+            return withTimeout(
+                session.selectFrom('transactions')
+                    .selectAll()
+                    .where('review', '=', 'new')
+                    .orderBy('due_date', 'asc')
+                    .orderBy('created_at', 'asc')
+                    .orderBy('id', 'asc')
+                    .limit(limit)
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'Review rows query timed out',
+            );
+        },
+
+        /** How many bank rows wait for review, and how many of them were not yet checked against the plans. */
+        async countReview(): Promise<{ pending: number; unmatched: number }> {
+            const result = await withTimeout(
+                session.selectFrom('transactions')
+                    .select([
+                        sql<number>`COUNT(*)`.as('pending'),
+                        sql<number>`COALESCE(SUM(CASE WHEN COALESCE(plan_match, '') = '' THEN 1 ELSE 0 END), 0)`.as('unmatched'),
+                    ])
+                    .where('review', '=', 'new')
+                    .executeTakeFirst(),
+                DB_TIMEOUT_MS,
+                'Review count timed out',
+            );
+            return { pending: toNumber(result?.pending), unmatched: toNumber(result?.unmatched) };
+        },
+
+        /** The review backlog: how many bank rows wait and the day of the oldest. */
+        async reviewBacklog(): Promise<{ pending: number; oldest: string | null }> {
+            const result = await withTimeout(
+                session.selectFrom('transactions')
+                    .select([sql<number>`COUNT(*)`.as('pending'), sql<string | null>`MIN(substr(trim(due_date), 1, 10))`.as('oldest')])
+                    .where('review', '=', 'new')
+                    .executeTakeFirst(),
+                DB_TIMEOUT_MS,
+                'Review backlog timed out',
+            );
+            return { pending: toNumber(result?.pending), oldest: result?.oldest ? String(result.oldest) : null };
+        },
+
+        /** Open plans in `[from, to]` that no bank row names yet: the candidates for matching. */
+        getOpenPlans(from: string, to: string): Promise<Transaction[]> {
+            return withTimeout(
+                session.selectFrom('transactions')
+                    .selectAll()
+                    .where('transaction_status', '=', 'active')
+                    .where(sql<boolean>`substr(trim(due_date), 1, 10) BETWEEN ${from} AND ${to}`)
+                    .where(sql<boolean>`NOT EXISTS (SELECT 1 FROM ${session.table('transactions')} AS bank_matches WHERE bank_matches.plan_match = transactions.id)`)
+                    .orderBy('due_date', 'asc')
+                    .orderBy('id', 'asc')
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'Open plans query timed out',
+            );
+        },
+
+        getByIds(ids: string[]): Promise<Transaction[]> {
+            if (ids.length === 0) return Promise.resolve([]);
+            return withTimeout(
+                session.selectFrom('transactions').selectAll().where('id', 'in', ids).execute(),
+                DB_TIMEOUT_MS,
+                'Rows by id query timed out',
+            );
+        },
+
+        /**
+         * For each bank text, the names reviewed bank rows with that text were given (lower case): a plan of such a
+         * name was confirmed for this text before.
+         */
+        async confirmedNames(bankTexts: string[]): Promise<Record<string, string[]>> {
+            const texts = [...new Set(bankTexts.filter(Boolean))];
+            if (texts.length === 0) return {};
+            const rows = await withTimeout(
+                session.selectFrom('transactions')
+                    .select(['bank_text', 'name'])
+                    .where('review', '=', 'reviewed')
+                    .where('bank_text', 'in', texts)
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'Confirmed names query timed out',
+            );
+            const out: Record<string, string[]> = {};
+            for (const row of rows) (out[String(row.bank_text)] ??= []).push(String(row.name ?? '').trim().toLowerCase());
+            return out;
+        },
+
+        /** Bank rows since a day that are not yet part of a transfer and were not ruled out as one. */
+        getTransferCandidates(since: string): Promise<Transaction[]> {
+            return withTimeout(
+                session.selectFrom('transactions')
+                    .selectAll()
+                    .where('bank_ref', '!=', '')
+                    .where('transfer_id', '=', '')
+                    .where(sql<boolean>`substr(trim(due_date), 1, 10) >= ${since}`)
+                    .orderBy('due_date', 'asc')
+                    .orderBy('id', 'asc')
+                    .limit(1000)
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'Transfer candidates query timed out',
+            );
+        },
+
+        /** Which of these ids exist (bulk tools that must not add or remove twice). */
+        async existingIds(ids: string[]): Promise<string[]> {
+            if (ids.length === 0) return [];
+            const rows = await withTimeout(
+                session.selectFrom('transactions').select('id').where('id', 'in', ids).execute(),
+                DB_TIMEOUT_MS,
+                'Existing ids query timed out',
+            );
+            return rows.map((row) => String(row.id));
+        },
+
+        /** Names of the given rows, by id (a bank row's suggested plan). */
+        async namesOf(ids: string[]): Promise<Record<string, string>> {
+            if (ids.length === 0) return {};
+            const rows = await withTimeout(
+                session.selectFrom('transactions').select(['id', 'name']).where('id', 'in', ids).execute(),
+                DB_TIMEOUT_MS,
+                'Row names query timed out',
+            );
+            return Object.fromEntries(rows.map((row) => [String(row.id), String(row.name ?? '')]));
+        },
+
+        /** One account's rows in `[from, to]`, newest first (the account drawer). */
+        getAssetRows(assetId: string, from: string, to: string, limit = 50): Promise<Transaction[]> {
+            return withTimeout(
+                session.selectFrom('transactions')
+                    .selectAll()
+                    .where('asset_id', '=', assetId)
+                    .where(sql<boolean>`substr(trim(due_date), 1, 10) BETWEEN ${from} AND ${to}`)
+                    .orderBy('due_date', 'desc')
+                    .orderBy('created_at', 'desc')
+                    .orderBy('id', 'asc')
+                    .limit(limit)
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'Account rows query timed out',
+            );
         },
 
         /** The most recently updated active rows of a month, chosen in SQL. */

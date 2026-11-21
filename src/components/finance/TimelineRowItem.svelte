@@ -8,6 +8,12 @@
         date: string;
         category: string;
         kind: TimelineKind;
+        /** A plan a bank row looks like it paid: dimmed, out of the forecast until the user decides. */
+        paused?: boolean;
+        /** The account a bank row belongs to. */
+        assetId?: string;
+        /** `new` for a bank row nobody has looked at yet. */
+        review?: string;
     };
     export type BalanceTone = "default" | "low" | "below";
 </script>
@@ -17,6 +23,7 @@
     import { format, parseISO } from "date-fns";
     import { categoryLabel } from "../../finance/categories.js";
     import { categoryIcon } from "../../finance/category-icons.js";
+    import { planActions, rowAccounts } from "../../finance/account-context.js";
     import { formatAmount } from "@hearthlog/sdk/format";
     import { Badge } from "@hearthlog/sdk/ui";
     import { CommandOnly } from "@hearthlog/sdk/ui";
@@ -72,6 +79,20 @@
     const restorable = $derived(row.kind === "done" && row.date >= today);
     const name = $derived(row.name || "Untitled");
     const Icon = $derived(categoryIcon(row.category));
+    const accounts = rowAccounts();
+    const account = $derived(row.assetId ? accounts().get(row.assetId) ?? null : null);
+    const unreviewed = $derived(row.review === "new");
+    const plans = planActions();
+    let deciding = $state(false);
+    async function decide(confirm: boolean): Promise<void> {
+        if (!plans || deciding) return;
+        deciding = true;
+        try {
+            await (confirm ? plans.confirm(row.id) : plans.decline(row.id));
+        } finally {
+            deciding = false;
+        }
+    }
     const balanceTitle = $derived(
         balanceTone === "low" || balanceTone === "below" ? "Lowest balance ahead"
             : "Balance after this plan",
@@ -82,6 +103,7 @@
     class="timeline-row"
     class:divider
     class:planned
+    class:paused={row.paused}
     class:selected
     class:highlighted
     class:flash
@@ -109,15 +131,26 @@
     </div>
     <span class="tile" aria-hidden="true"><Icon class="h-[18px] w-[18px]" /></span>
     <button type="button" class="cell-main" onclick={() => onEdit?.(row)}>
-        <span class="name-line"><span class="name">{name}</span><SyncStateBadge entityId={`transaction:${row.id}`} /></span>
-        <span class="category">{#if planned}<Badge class="planned-badge">Planned</Badge>{/if}{categoryLabel(row.category)}</span>
+        <span class="name-line">{#if unreviewed}<span class="new-dot" title="From the bank, not reviewed yet"></span>{/if}<span class="name">{name}</span><SyncStateBadge entityId={`transaction:${row.id}`} /></span>
+        {#if row.paused}
+            <span class="category paid-note"><IconCheck class="h-3.5 w-3.5 shrink-0" /><span class="paid-text">Looks paid · not counted until you decide</span></span>
+        {:else}
+            <span class="category">{#if planned}<Badge class="planned-badge">Planned</Badge>{/if}{categoryLabel(row.category)}{#if account}<span class="account" title={account.name}> · {account.name}</span>{/if}</span>
+        {/if}
     </button>
     <div class="cell-amount">
         <span class="amount" class:income={row.amount > 0}>{formatAmount(row.amount, { signed: true })}</span>
         {#if balance !== null}<span class="balance {balanceTone}" title={balanceTitle} data-balance>{formatAmount(balance)}</span>{/if}
     </div>
     <div class="cell-end">
-        {#if markable}
+        {#if row.paused && plans}
+            <CommandOnly>
+                <span class="paid-actions">
+                    <button type="button" class="paid-button primary" disabled={deciding} onclick={() => void decide(true)}>Confirm</button>
+                    <button type="button" class="paid-button" disabled={deciding} onclick={() => void decide(false)}>Not this one</button>
+                </span>
+            </CommandOnly>
+        {:else if markable}
             <CommandOnly>
                 <button type="button" class="done-button" disabled={busy} aria-label={`Mark ${name} done`} onclick={() => void onMarkDone?.(row)}>
                     <IconCheck class="h-3.5 w-3.5" />Done
@@ -176,7 +209,7 @@
         --gap: 0.75rem;
         position: relative;
         display: grid;
-        grid-template-columns: var(--check) var(--date) 2rem minmax(0, 1fr) auto 4.5rem 2.25rem;
+        grid-template-columns: var(--check) var(--date) 2rem minmax(0, 1fr) auto minmax(4.5rem, auto) 2.25rem;
         align-items: center;
         column-gap: var(--gap);
         min-height: 3.375rem;
@@ -228,6 +261,16 @@
     .planned .name { color: var(--stor-muted-text); }
     .category { display: flex; align-items: center; gap: 0.375rem; font-size: 12px; line-height: 16px; color: var(--stor-muted-text); white-space: nowrap; }
     .category :global(.planned-badge) { min-height: 18px; padding: 0 6px; font-size: 11px; line-height: 18px; }
+    .new-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--stor-action); }
+    .account { overflow: hidden; min-width: 0; text-overflow: ellipsis; }
+    .paid-note { min-width: 0; font-weight: 600; color: var(--stor-accent-text); }
+    .paid-text { overflow: hidden; min-width: 0; text-overflow: ellipsis; }
+    .paused { background: color-mix(in srgb, var(--stor-accent-soft, var(--stor-selected)) 45%, transparent); }
+    .paused .amount { color: var(--stor-faint-text); text-decoration: line-through; text-decoration-color: var(--stor-border-strong); }
+    .paid-actions { display: inline-flex; gap: 6px; }
+    .paid-button { height: 1.75rem; padding: 0 0.625rem; border: 0; border-radius: 999px; background: var(--stor-surface-raised); box-shadow: var(--stor-elevation-2); font-size: 12px; font-weight: 600; color: var(--stor-ink); white-space: nowrap; }
+    .paid-button.primary { background: var(--stor-action); box-shadow: none; color: var(--stor-action-text, #fff); }
+    .paid-button:disabled { opacity: 0.45; }
     .cell-amount { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; }
     .amount { font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; color: var(--stor-ink); }
     .amount.income { color: var(--stor-positive); }
