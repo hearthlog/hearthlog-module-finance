@@ -460,6 +460,45 @@ export function createTransactionRepository(session: ReadModelSession) {
             return rows.map((row) => String(row.category));
         },
 
+        /** Which of these ids exist (bulk tools that must not add or remove twice). */
+        async existingIds(ids: string[]): Promise<string[]> {
+            if (ids.length === 0) return [];
+            const rows = await withTimeout(
+                session.selectFrom('transactions').select('id').where('id', 'in', ids).execute(),
+                DB_TIMEOUT_MS,
+                'Existing ids query timed out',
+            );
+            return rows.map((row) => String(row.id));
+        },
+
+        /** Names of the given rows, by id (a bank row's suggested plan). */
+        async namesOf(ids: string[]): Promise<Record<string, string>> {
+            if (ids.length === 0) return {};
+            const rows = await withTimeout(
+                session.selectFrom('transactions').select(['id', 'name']).where('id', 'in', ids).execute(),
+                DB_TIMEOUT_MS,
+                'Row names query timed out',
+            );
+            return Object.fromEntries(rows.map((row) => [String(row.id), String(row.name ?? '')]));
+        },
+
+        /** One account's rows in `[from, to]`, newest first (the account drawer). */
+        getAssetRows(assetId: string, from: string, to: string, limit = 50): Promise<Transaction[]> {
+            return withTimeout(
+                session.selectFrom('transactions')
+                    .selectAll()
+                    .where('asset_id', '=', assetId)
+                    .where(sql<boolean>`substr(trim(due_date), 1, 10) BETWEEN ${from} AND ${to}`)
+                    .orderBy('due_date', 'desc')
+                    .orderBy('created_at', 'desc')
+                    .orderBy('id', 'asc')
+                    .limit(limit)
+                    .execute(),
+                DB_TIMEOUT_MS,
+                'Account rows query timed out',
+            );
+        },
+
         /** The most recently updated active rows of a month, chosen in SQL. */
         getRecentActiveTransactions(year: number, month: number, limit = 5): Promise<Transaction[]> {
             const { startDate, endDate } = monthBounds(year, month);

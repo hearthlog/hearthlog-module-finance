@@ -44,6 +44,8 @@
     import { formatAmount } from "@hearthlog/sdk/format";
     import { loadPhoneBalance, savePhoneBalance } from "../finance/phone-balance.js";
     import type { FinancePageData } from "./month.js";
+    import { provideRowAccounts } from "../finance/account-context.js";
+    import { bankInfo } from "../finance/banks.js";
 
     type TransactionDrawerComponent = typeof import("../components/finance/TransactionDrawer.svelte").default;
     type FinanceData = FinancePageData;
@@ -58,6 +60,12 @@
     let shown = $state.raw<FinanceData | null>(null);
     let revision = $state(0);
     const view = $derived(shown ?? resource.data);
+    // Timeline rows name the account a bank row belongs to.
+    const rowAccountMap = $derived(new Map(view.assets.filter((asset) => asset.link === "bank").map((asset) => [asset.id, {
+        name: asset.name,
+        mark: bankInfo(view.connections.find((connection) => connection.id === asset.connection_id)?.bank)?.mark ?? "",
+    }])));
+    provideRowAccounts(() => rowAccountMap);
     const displayResource = $derived({
         loading: shown ? false : resource.loading,
         error: resource.error,
@@ -736,6 +744,7 @@
                     floor={floor}
                     assets={view.assets}
                     assetsSum={view.assetsSum}
+                    connections={view.connections}
                     onFloorChange={changeFloor}
                     onJump={(date) => void goToDate(date, "planned")}
                     onUpdateAssets={() => (assetsSheetOpen = true)}
@@ -856,11 +865,13 @@
             floor={floor}
             assets={view.assets}
             assetsSum={view.assetsSum}
+            connections={view.connections}
             onFloorChange={changeFloor}
         />
     </PhoneGlance>
 
-    <AssetsSheet show={assetsSheetOpen} assets={view.assets} onClose={() => (assetsSheetOpen = false)} />
+    <!-- A linked account's balance is the bank's: only hand-kept ones are typed here. -->
+    <AssetsSheet show={assetsSheetOpen} assets={view.assets.filter((asset) => asset.link !== "bank")} onClose={() => (assetsSheetOpen = false)} />
 
     <Modal show={optionsOpen} title="Show" onClose={() => (optionsOpen = false)}>
         <nav class="stor-segmented-control grid grid-cols-3" aria-label="Show">

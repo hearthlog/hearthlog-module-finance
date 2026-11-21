@@ -105,6 +105,7 @@
                     <p class="text-sm font-semibold text-[var(--stor-ink)]">Current assets</p>
                 </div>
                 <CommandOnly>
+                    {#if import.meta.env.DEV}{#await import("../../dev/DevBankPanel.svelte") then dev}<span class="ml-auto mr-2"><dev.default /></span>{/await}{/if}
                     {#if !isAdding && !editingAsset}
                         {#if onUpdateAll && sortedAssets.length > 1}
                             <button type="button" class="ml-auto mr-2 shrink-0 text-xs font-semibold text-[var(--stor-accent-text)]" onclick={onUpdateAll}>Update balances</button>

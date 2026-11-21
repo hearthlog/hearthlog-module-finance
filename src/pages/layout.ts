@@ -6,11 +6,12 @@ export const load = ({ depends, parent }: ModuleLoadEvent) => {
     const assetsData = parent().then(async ({ workspace }) => {
         await workspace.ready;
         return queryDatabase(async (repositories) => {
-            const [assets, assetsSum] = await Promise.all([
+            const [assets, assetsSum, connections] = await Promise.all([
                 repositories.assets.getAssetsByType('asset'),
                 repositories.assets.getSumOfAssetsByType('asset'),
+                repositories.assets.getBankConnections(),
             ]);
-            return { assets, assetsSum };
+            return { assets, assetsSum, connections };
         });
     });
     void assetsData.catch(() => undefined);

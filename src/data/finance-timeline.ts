@@ -35,6 +35,10 @@ export interface TimelineRow {
     balanceAfter: number | null;
     /** A plan a bank row looks like it paid: shown dimmed, out of the forecast until confirmed or declined. */
     paused: boolean;
+    /** The account the row belongs to; empty for rows kept by hand. */
+    assetId: string;
+    /** `new` for a bank row nobody has looked at yet. */
+    review: string;
     /** First visible row of its day within its section. */
     firstOfDay: boolean;
     /** The last plan of the day with the lowest balance ahead. */
@@ -108,6 +112,8 @@ function baseCtes(session: ReadModelSession, today: string): RawBuilder<unknown>
                 CASE WHEN ${isTransfer('transactions')} THEN 1 ELSE 0 END AS transfer,
                 CASE WHEN transaction_status <> 'archived' AND substr(trim(due_date), 1, 10) >= ${today}
                     AND ${isPaused(session, 'transactions')} THEN 1 ELSE 0 END AS paused,
+                COALESCE(asset_id, '') AS asset_id,
+                COALESCE(review, '') AS review,
                 COALESCE(created_at, '') AS created_at
             FROM ${session.table('transactions')} AS transactions
         ),
@@ -145,7 +151,7 @@ export function createTimelineRepository(session: ReadModelSession) {
             const result = await withTimeout(
                 session.execute(sql<{
                     id: string; name: string; amount: unknown; date: string; category: string; status: string;
-                    kind: TimelineKind; section: unknown; balance_after: unknown; first_of_day: unknown; is_low: unknown; paused: unknown;
+                    kind: TimelineKind; section: unknown; balance_after: unknown; first_of_day: unknown; is_low: unknown; paused: unknown; asset_id: unknown; review: unknown;
                 }>`
                     WITH ${baseCtes(session, today)},
                     running AS (
@@ -182,6 +188,8 @@ export function createTimelineRepository(session: ReadModelSession) {
                         placed.kind,
                         placed.section,
                         placed.paused,
+                        placed.asset_id,
+                        placed.review,
                         running.balance_after,
                         ROW_NUMBER() OVER (
                             PARTITION BY placed.section, placed.day ORDER BY placed.created_at, placed.id
@@ -207,6 +215,8 @@ export function createTimelineRepository(session: ReadModelSession) {
                 section: toNumber(row.section) as TimelineSection,
                 balanceAfter: toNullableNumber(row.balance_after),
                 paused: toNumber(row.paused) === 1,
+                assetId: String(row.asset_id ?? ''),
+                review: String(row.review ?? ''),
                 firstOfDay: toNumber(row.first_of_day) === 1,
                 isLow: toNumber(row.is_low) === 1,
             }));

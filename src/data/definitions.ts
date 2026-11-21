@@ -51,6 +51,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
             { name: "anchor_at", type: "datetime", payloadKey: "anchor_at", default: null, optionalInPayload: true },
             // Last time the provider wrote this asset.
             { name: "synced_at", type: "datetime", payloadKey: "synced_at", default: null, optionalInPayload: true },
+            // Something about the account that needs a look: `unread_mail` (mails not understood, how many in
+            // `issue_count`) or `balance_gap` (the stated balance and the rows differ by `issue_amount`); empty when fine.
+            { name: "sync_issue", type: "string", payloadKey: "sync_issue", default: "", optionalInPayload: true },
+            { name: "issue_count", type: "number", payloadKey: "issue_count", default: 0, optionalInPayload: true },
+            { name: "issue_amount", type: "number", payloadKey: "issue_amount", default: null, optionalInPayload: true },
         ],
         indexes: [{ name: "idx_assets_type", columns: ["asset_type"] }],
     },
@@ -145,10 +150,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
             { name: "country", type: "string", payloadKey: "country", default: "CZ" },
             // Consent expiry (Enable Banking); empty for providers without one.
             { name: "valid_until", type: "datetime", payloadKey: "valid_until", default: null },
-            // `active`, `expired`, `error` or `revoked`.
+            // `active`, `rate_limited` (wait until `next_try_at`), `expired`, `revoked` or `error` (see `last_error`).
             { name: "status", type: "string", payloadKey: "status", default: "active" },
+            { name: "next_try_at", type: "datetime", payloadKey: "next_try_at", default: null, optionalInPayload: true },
             { name: "last_sync_at", type: "datetime", payloadKey: "last_sync_at", default: null },
             { name: "last_error", type: "string", payloadKey: "last_error", default: "" },
+            // Email providers: the private address mails are forwarded to, and the day rows start from.
+            { name: "address", type: "string", payloadKey: "address", default: "", optionalInPayload: true },
+            { name: "rows_since", type: "datetime", payloadKey: "rows_since", default: null, optionalInPayload: true },
         ],
         indexes: [
             { name: "idx_bank_connections_scope", columns: ["tenant_id", "log_id", "created_at"] },

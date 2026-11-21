@@ -1,6 +1,6 @@
 import { deferPage, type PagePublisher } from '@hearthlog/sdk/runtime';
 import type { ModuleLoadEvent } from '@hearthlog/sdk/runtime';
-import type { Asset } from '../data/assets.js';
+import type { Asset, BankConnection } from '../data/assets.js';
 import type { BudgetItem } from '@hearthlog/sdk/data';
 import type { BudgetItemSort, BudgetPlanSummary } from '../data/budgets.js';
 import type { BalanceRange, TimelineOutlook } from '../data/finance-timeline.js';
@@ -21,6 +21,8 @@ export interface FinancePageData {
     floor: number;
     assets: Asset[];
     assetsSum: number;
+    /** Links to banks; a linked asset's state comes from its connection. */
+    connections: BankConnection[];
     budgetPlans: BudgetPlanSummary[];
     budgetIncomeItems: BudgetItem[];
     budgetExpenseItems: BudgetItem[];
@@ -39,6 +41,7 @@ function emptyData(year: number, month: number): FinancePageData {
         floor: 0,
         assets: [],
         assetsSum: 0,
+        connections: [],
         budgetPlans: [],
         budgetIncomeItems: [],
         budgetExpenseItems: [],
@@ -53,7 +56,7 @@ const loadData = async (
     publish: PagePublisher<FinancePageData>,
 ): Promise<FinancePageData> => {
     // The layout's load supplies the assets; the route loader receives untyped parent data.
-    const { assetsData } = await parent() as { assetsData: Promise<{ assets: Asset[]; assetsSum: number }> };
+    const { assetsData } = await parent() as { assetsData: Promise<{ assets: Asset[]; assetsSum: number; connections: BankConnection[] }> };
     const assetsReady = assetsData.then((value) => { publish(value, 'assets'); return value; });
     void assetsReady.catch(() => undefined);
     const now = await appClock.ready();
@@ -65,7 +68,7 @@ const loadData = async (
 
     // The endless views read the months and weeks that scroll into view on
     // their own; the page loads what spans all of them.
-    const [{ assets, assetsSum }, floor, result] = await Promise.all([
+    const [{ assets, assetsSum, connections }, floor, result] = await Promise.all([
         assetsReady,
         loadBalanceFloor(),
         queryDatabase(async (repositories) => {
@@ -85,7 +88,7 @@ const loadData = async (
         }),
     ]);
 
-    return { year: Number(params.year ?? 0), month: Number(params.month ?? 0), today, floor, assets, assetsSum, incomeSort, expenseSort, ...result };
+    return { year: Number(params.year ?? 0), month: Number(params.month ?? 0), today, floor, assets, assetsSum, connections, incomeSort, expenseSort, ...result };
 };
 
 export const load = (event: ModuleLoadEvent) => {

@@ -1,6 +1,13 @@
 <script lang="ts">
     import { differenceInCalendarDays, format, parseISO } from "date-fns";
-    import type { Asset } from "../../data/assets.js";
+    import type { Asset, BankConnection } from "../../data/assets.js";
+    import { orderAccounts, overviewOf, summarizeAccount, type AccountSummary } from "../../finance/accounts.js";
+    import { removeAsset, saveHandKeptAsset } from "../../finance/account-commands.js";
+    import { appClock, notify } from "@hearthlog/sdk/runtime";
+    import AccountsStrip from "./AccountsStrip.svelte";
+    import AccountDrawer from "./AccountDrawer.svelte";
+    import AssetDrawer from "./AssetDrawer.svelte";
+    import BankMark from "./BankMark.svelte";
     import type { TimelineOutlook } from "../../data/finance-timeline.js";
     import { parseFloor } from "../../finance/floor.js";
     import { formatAmount } from "@hearthlog/sdk/format";
@@ -15,6 +22,7 @@
         floor,
         assets,
         assetsSum,
+        connections = [],
         onFloorChange,
         onJump,
         sheet = false,
@@ -25,6 +33,8 @@
         floor: number;
         assets: Asset[];
         assetsSum: number;
+        /** Links to banks: with one, the assets show as accounts with their state. */
+        connections?: BankConnection[];
         onFloorChange: (value: number) => void;
         /** Scrolls the list to a day named in the readout. */
         onJump?: (date: string) => void;
@@ -45,6 +55,40 @@
     const endDay = $derived(outlook.endDate ? format(parseISO(outlook.endDate), outlook.endDate.slice(0, 4) === today.slice(0, 4) ? "d MMM" : "d MMM yyyy") : "");
     const assetNames = $derived(assets.map((asset) => asset.name).join(" · "));
 
+    // Linked accounts: each asset's state from its own fields and its connection's. The clock is read with the
+    // data, so stamps move whenever the page refreshes.
+    const now = $derived.by(() => { void assets; void connections; return appClock.now(); });
+    const accounts = $derived.by<AccountSummary[]>(() => orderAccounts(assets.map((asset) =>
+        summarizeAccount(asset, connections.find((connection) => connection.id === asset.connection_id) ?? null, now))));
+    const overview = $derived(overviewOf(accounts, assets, now));
+    const linked = $derived(overview.linked > 0);
+
+    let openAccountId = $state<string | null>(null);
+    let editingAssetId = $state<string | null>(null);
+    let addingAsset = $state(false);
+    const openAccount = $derived(accounts.find((account) => account.id === openAccountId) ?? null);
+    const openAsset = $derived(assets.find((asset) => asset.id === openAccountId) ?? null);
+    const editingAsset = $derived(assets.find((asset) => asset.id === editingAssetId) ?? null);
+
+    function openFromStrip(account: AccountSummary): void {
+        if (account.linked) openAccountId = account.id;
+        else editingAssetId = account.id;
+    }
+
+    async function saveAsset(draft: { name: string; amount: number }): Promise<void> {
+        await saveHandKeptAsset(editingAsset, draft);
+        notify.success(editingAsset ? "Asset updated" : "Asset added");
+        editingAssetId = null;
+        addingAsset = false;
+    }
+
+    async function deleteAsset(): Promise<void> {
+        if (!editingAsset) return;
+        await removeAsset(editingAsset);
+        notify.success("Asset deleted");
+        editingAssetId = null;
+    }
+
     function commitFloor(input: HTMLInputElement): void {
         const value = parseFloor(input.value);
         if (value === null) {
@@ -61,9 +105,16 @@
 <section class="readout shrink-0" class:open={assetsOpen || sheet} class:sheet aria-label="Outlook">
     <div class="cell lead">
         <button type="button" class="cell-button" aria-expanded={assetsOpen} aria-controls="finance-current-assets" aria-label="Available now" onclick={() => (assetsOpen = !assetsOpen)}>
-            <Metric label="Available now" size="lg" unit="Kč" detail={assetNames || "Add current assets"}>
-                <DataValue>{formatAmount(outlook.available)}</DataValue>
-            </Metric>
+            {#if linked}
+                <Metric label="Available now" size="lg" unit="Kč" detail={overview.breakdown}>
+                    <DataValue>{formatAmount(outlook.available)}</DataValue>
+                    {#snippet delta()}{#if overview.stamp}<span class="stamp {overview.tone}"><span class="dot"></span>{overview.stamp}</span>{/if}{/snippet}
+                </Metric>
+            {:else}
+                <Metric label="Available now" size="lg" unit="Kč" detail={assetNames || "Add current assets"}>
+                    <DataValue>{formatAmount(outlook.available)}</DataValue>
+                </Metric>
+            {/if}
             <IconChevronDown class="chevron h-4 w-4 shrink-0 transition-transform {assetsOpen ? 'rotate-180' : ''}" />
         </button>
     </div>
@@ -103,11 +154,23 @@
     <!-- The sheet lists the assets; Update assets opens every balance in one place. -->
     <div id="finance-current-assets" class="mt-3 flex flex-col">
         <p class="text-xs font-semibold uppercase tracking-wide text-[var(--stor-muted-text)]">Assets</p>
-        {#each assets as asset (asset.id)}
-            <div class="flex min-h-12 items-center justify-between gap-3 border-b border-[color-mix(in_srgb,var(--stor-border)_62%,transparent)] text-[15px]">
-                <span class="min-w-0 truncate text-[var(--stor-ink)]">{asset.name}</span>
-                <b class="shrink-0 font-semibold tabular-nums text-[var(--stor-ink)]">{formatAmount(Number(asset.amount))} Kč</b>
-            </div>
+        {#each accounts as account (account.id)}
+            {#if account.linked}
+                <button type="button" class="sheet-account" onclick={() => (openAccountId = account.id)}>
+                    <BankMark mark={account.bank?.mark ?? ""} />
+                    <span class="flex min-w-0 flex-1 flex-col text-left">
+                        <span class="truncate text-[var(--stor-ink)]">{account.name}</span>
+                        <span class="sheet-detail {account.tone}">{account.tone === "ok" ? account.detail : account.stamp}</span>
+                    </span>
+                    <b class="shrink-0 font-semibold tabular-nums" class:text-[var(--stor-faint-text)]={account.frozen}>{formatAmount(account.balance)} Kč</b>
+                </button>
+            {:else}
+                <div class="flex min-h-12 items-center justify-between gap-3 border-b border-[color-mix(in_srgb,var(--stor-border)_62%,transparent)] text-[15px]">
+                    {#if linked}<BankMark />{/if}
+                    <span class="min-w-0 flex-1 truncate text-[var(--stor-ink)]">{account.name}</span>
+                    <b class="shrink-0 font-semibold tabular-nums text-[var(--stor-ink)]">{formatAmount(account.balance)} Kč</b>
+                </div>
+            {/if}
         {:else}
             <p class="py-3 text-sm text-[var(--stor-muted-text)]">No assets yet.</p>
         {/each}
@@ -115,10 +178,33 @@
             {assets.length ? "Update assets" : "Add an asset"}<IconChevronDown class="h-5 w-5 -rotate-90" />
         </button>
     </div>
+{:else if assetsOpen && linked}
+    <div id="finance-current-assets" class="shrink-0">
+        <AccountsStrip {accounts} onOpen={openFromStrip} onAdd={() => (addingAsset = true)} onUpdateAll={onUpdateAssets} />
+    </div>
 {:else if assetsOpen}
     <div id="finance-current-assets" class="shrink-0">
         <AssetView {assets} {assetsSum} onUpdateAll={onUpdateAssets} />
     </div>
+{/if}
+
+{#if linked}
+    <AccountDrawer
+        show={!!openAccount}
+        account={openAccount}
+        asset={openAsset}
+        connection={connections.find((connection) => connection.id === openAsset?.connection_id) ?? null}
+        {today}
+        {now}
+        onClose={() => (openAccountId = null)}
+    />
+    <AssetDrawer
+        show={addingAsset || !!editingAsset}
+        asset={editingAsset}
+        onClose={() => { addingAsset = false; editingAssetId = null; }}
+        onSave={saveAsset}
+        onDelete={deleteAsset}
+    />
 {/if}
 
 <style>
@@ -154,6 +240,16 @@
     .cell-button:focus-visible { outline: 2px solid var(--stor-focus); outline-offset: -2px; }
     .readout :global(.chevron) { position: absolute; top: 1rem; right: 1rem; color: var(--stor-faint-text); }
     .warn :global(.stor-metric-support) { color: var(--stor-warning); }
+    .stamp { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; font-weight: 500; }
+    .stamp .dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--stor-positive); }
+    .stamp.stale { color: var(--stor-warning); }
+    .stamp.stale .dot { background: var(--stor-warning); }
+    .stamp.dead { color: var(--stor-negative); }
+    .stamp.dead .dot { background: var(--stor-negative); }
+    .sheet-account { display: flex; width: 100%; min-height: 3.5rem; align-items: center; gap: 0.75rem; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--stor-border) 62%, transparent); background: transparent; font-size: 15px; color: var(--stor-ink); }
+    .sheet-detail { overflow: hidden; font-size: 12px; line-height: 16px; color: var(--stor-faint-text); text-overflow: ellipsis; white-space: nowrap; }
+    .sheet-detail.stale { color: var(--stor-warning); }
+    .sheet-detail.dead { color: var(--stor-negative); }
     .floor-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
     .floor-input {
         width: 7ch;
