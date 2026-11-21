@@ -2,6 +2,7 @@ import type { Transaction } from '@hearthlog/sdk/data';
 import type { ReadModelSession } from '@hearthlog/sdk/data';
 import { withTimeout } from '@hearthlog/sdk/data';
 import { sql } from 'kysely';
+import { countsInForecast, isTransfer } from './counting.js';
 
 export type { Transaction };
 
@@ -180,15 +181,19 @@ export function createTransactionRepository(session: ReadModelSession) {
                     past_due_count: number | string | null;
                     archived_count: number | string | null;
                 }>`
+                    WITH flagged AS (
+                        SELECT transactions.*, CASE WHEN ${countsInForecast(session, 'transactions')} THEN 1 ELSE 0 END AS counts
+                        FROM ${session.table('transactions')} AS transactions
+                    )
                     SELECT
-                        SUM(CASE WHEN transaction_status = 'active' AND due_date >= ${today} AND due_date <= ${endDate} AND amount > 0 THEN amount ELSE 0 END) AS planned_income,
-                        SUM(CASE WHEN transaction_status = 'active' AND due_date >= ${today} AND due_date <= ${endDate} AND amount < 0 THEN -amount ELSE 0 END) AS planned_expenses,
-                        SUM(CASE WHEN transaction_status = 'active' AND due_date >= ${today} AND due_date <= ${endDate} THEN amount ELSE 0 END) AS planned_flow,
+                        SUM(CASE WHEN counts = 1 AND due_date >= ${today} AND due_date <= ${endDate} AND amount > 0 THEN amount ELSE 0 END) AS planned_income,
+                        SUM(CASE WHEN counts = 1 AND due_date >= ${today} AND due_date <= ${endDate} AND amount < 0 THEN -amount ELSE 0 END) AS planned_expenses,
+                        SUM(CASE WHEN counts = 1 AND due_date >= ${today} AND due_date <= ${endDate} THEN amount ELSE 0 END) AS planned_flow,
                         SUM(CASE WHEN transaction_status = 'active' AND due_date >= ${today} AND due_date <= ${endDate} THEN 1 ELSE 0 END) AS planned_count,
                         COUNT(DISTINCT CASE WHEN transaction_status = 'active' AND due_date >= ${today} AND due_date <= ${endDate} THEN substr(trim(due_date), 1, 10) END) AS planned_day_count,
                         SUM(CASE WHEN transaction_status = 'active' AND due_date < ${today} THEN 1 ELSE 0 END) AS past_due_count,
                         SUM(CASE WHEN transaction_status = 'archived' THEN 1 ELSE 0 END) AS archived_count
-                    FROM ${session.table('transactions')} AS transactions
+                    FROM flagged
                 `),
                 DB_TIMEOUT_MS,
                 'Planning summary query timed out',
@@ -210,7 +215,7 @@ export function createTransactionRepository(session: ReadModelSession) {
                 session.selectFrom('transactions')
                     .select(({ fn }) => fn.sum('amount').as('total_amount'))
                     .where('due_date', '<', date)
-                    .where('transaction_status', '=', 'active')
+                    .where(countsInForecast(session, 'transactions'))
                     .executeTakeFirst(),
                 DB_TIMEOUT_MS,
                 'getSumOfTransactionAmountsUpToDate timed out',
@@ -273,7 +278,7 @@ export function createTransactionRepository(session: ReadModelSession) {
                     daily AS (
                         SELECT substr(trim(due_date), 1, 10) AS day, SUM(amount) AS amount
                         FROM ${session.table('transactions')} AS transactions
-                        WHERE transaction_status = 'active'
+                        WHERE ${countsInForecast(session, 'transactions')}
                             AND due_date >= ${startDate}
                             AND due_date <= ${endDate}
                         GROUP BY day
@@ -308,14 +313,18 @@ export function createTransactionRepository(session: ReadModelSession) {
                     active_day_count: number | string | null;
                     archived_count: number | string | null;
                 }>`
+                    WITH flagged AS (
+                        SELECT transactions.*, CASE WHEN ${countsInForecast(session, 'transactions')} THEN 1 ELSE 0 END AS counts
+                        FROM ${session.table('transactions')} AS transactions
+                    )
                     SELECT
-                        SUM(CASE WHEN transaction_status = 'active' AND amount > 0 THEN amount ELSE 0 END) AS income_total,
-                        SUM(CASE WHEN transaction_status = 'active' AND amount < 0 THEN -amount ELSE 0 END) AS expense_total,
-                        SUM(CASE WHEN transaction_status = 'active' THEN amount ELSE 0 END) AS month_flow,
+                        SUM(CASE WHEN counts = 1 AND amount > 0 THEN amount ELSE 0 END) AS income_total,
+                        SUM(CASE WHEN counts = 1 AND amount < 0 THEN -amount ELSE 0 END) AS expense_total,
+                        SUM(CASE WHEN counts = 1 THEN amount ELSE 0 END) AS month_flow,
                         SUM(CASE WHEN transaction_status = 'active' THEN 1 ELSE 0 END) AS active_transaction_count,
                         COUNT(DISTINCT CASE WHEN transaction_status = 'active' THEN substr(trim(due_date), 1, 10) END) AS active_day_count,
                         SUM(CASE WHEN transaction_status = 'archived' THEN 1 ELSE 0 END) AS archived_count
-                    FROM ${session.table('transactions')} AS transactions
+                    FROM flagged
                     WHERE due_date >= ${startDate}
                         AND due_date <= ${endDate}
                 `),
@@ -437,6 +446,7 @@ export function createTransactionRepository(session: ReadModelSession) {
                 session.selectFrom('transactions')
                     .select(['transaction_category as category', ({ fn }) => fn.countAll().as('uses')])
                     .where(sql<boolean>`COALESCE(transaction_category, '') NOT IN ('', 'unknown')`)
+                    .where(sql<boolean>`NOT ${isTransfer('transactions')}`)
                     .where(sql<boolean>`substr(trim(due_date), 1, 10) >= ${since}`)
                     .where(direction === 'income' ? sql<boolean>`amount > 0` : sql<boolean>`amount < 0`)
                     .groupBy('transaction_category')

@@ -12,6 +12,8 @@ export const TRANSACTION_CATEGORIES = [
     { value: 'kids', label: 'Kids' },
     { value: 'gifts', label: 'Gifts and giving' },
     { value: 'other', label: 'Other' },
+    // Money moving between the user's own accounts: left out of income, expenses, budgets and the forecast.
+    { value: 'transfer', label: 'Between my accounts' },
 ] as const;
 
 export type TransactionCategory = (typeof TRANSACTION_CATEGORIES)[number]['value'];
@@ -27,3 +29,6 @@ export function categoryLabel(value: string | null | undefined): string {
 export function isTransactionCategory(value: unknown): value is TransactionCategory {
     return typeof value === 'string' && value in LABELS;
 }
+
+/** Rows that only move money between the user's own accounts. */
+export const TRANSFER_CATEGORY = 'transfer';

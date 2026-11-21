@@ -73,7 +73,7 @@
     "definitions": "./src/data/definitions.ts",
     "repositories": "./src/data/repositories.ts"
   },
-  "projectionVersion": 1,
+  "projectionVersion": 2,
   "aiCapabilities": [
     "category-pick"
   ],

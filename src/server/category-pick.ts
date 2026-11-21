@@ -21,7 +21,8 @@ const MEANINGS: Record<string, string> = {
 /** Which category a bank transaction belongs to, picked by a small decision model. */
 export const categoryPick: AiCapabilityDefinition = {
     options: () => TRANSACTION_CATEGORIES
-        .filter((category) => category.value !== 'unknown')
+        // A transfer is recognised from both sides of the move, never guessed from a name.
+        .filter((category) => category.value !== 'unknown' && category.value !== 'transfer')
         .map((category) => ({ value: category.value, meaning: MEANINGS[category.value] ?? category.label })),
     parseItem(value): CategoryPickItem {
         const item = aiInput.object(value);

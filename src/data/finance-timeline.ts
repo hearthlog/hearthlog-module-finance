@@ -1,6 +1,7 @@
 import { sql, type RawBuilder } from 'kysely';
 import type { ReadModelSession } from '@hearthlog/sdk/data';
 import { withTimeout } from '@hearthlog/sdk/data';
+import { isPaused, isTransfer } from './counting.js';
 import type { TimelineKind, TimelineSection, TimelineShow } from '../finance/timeline.js';
 
 /**
@@ -13,6 +14,10 @@ import type { TimelineKind, TimelineSection, TimelineShow } from '../finance/tim
  * passed: done rows are history that assets already reflect, so they never
  * move a balance. Balances therefore exist from today on only; after the last
  * plan they stay constant.
+ *
+ * Two kinds of plan stay in the list but move no balance (see `counting.ts`):
+ * a transfer between the user's own accounts, and a paused plan, one a bank row
+ * names as its likely match. Transfers never count as income or expenses.
  */
 
 const DB_TIMEOUT_MS = 5000;
@@ -26,8 +31,10 @@ export interface TimelineRow {
     status: 'active' | 'archived';
     kind: TimelineKind;
     section: TimelineSection;
-    /** Running balance after this row for plans; null for done rows. */
+    /** Running balance after this row for plans that move it; null for done rows, transfers and paused plans. */
     balanceAfter: number | null;
+    /** A plan a bank row looks like it paid: shown dimmed, out of the forecast until confirmed or declined. */
+    paused: boolean;
     /** First visible row of its day within its section. */
     firstOfDay: boolean;
     /** The last plan of the day with the lowest balance ahead. */
@@ -98,8 +105,14 @@ function baseCtes(session: ReadModelSession, today: string): RawBuilder<unknown>
                     WHEN transaction_status = 'archived' OR substr(trim(due_date), 1, 10) < ${today} THEN 'done'
                     ELSE 'planned'
                 END AS kind,
+                CASE WHEN ${isTransfer('transactions')} THEN 1 ELSE 0 END AS transfer,
+                CASE WHEN transaction_status <> 'archived' AND substr(trim(due_date), 1, 10) >= ${today}
+                    AND ${isPaused(session, 'transactions')} THEN 1 ELSE 0 END AS paused,
                 COALESCE(created_at, '') AS created_at
             FROM ${session.table('transactions')} AS transactions
+        ),
+        counted AS (
+            SELECT * FROM typed WHERE kind = 'planned' AND transfer = 0 AND paused = 0
         ),
         asset_total AS (
             SELECT COALESCE(SUM(amount), 0) AS amount
@@ -113,7 +126,7 @@ function dayEndCtes(session: ReadModelSession, today: string): RawBuilder<unknow
     return sql`
         ${baseCtes(session, today)},
         planned_days AS (
-            SELECT day, SUM(amount) AS amount FROM typed WHERE kind = 'planned' GROUP BY day
+            SELECT day, SUM(amount) AS amount FROM counted GROUP BY day
         ),
         day_end AS (
             SELECT day, (SELECT amount FROM asset_total) + SUM(amount) OVER (
@@ -132,7 +145,7 @@ export function createTimelineRepository(session: ReadModelSession) {
             const result = await withTimeout(
                 session.execute(sql<{
                     id: string; name: string; amount: unknown; date: string; category: string; status: string;
-                    kind: TimelineKind; section: unknown; balance_after: unknown; first_of_day: unknown; is_low: unknown;
+                    kind: TimelineKind; section: unknown; balance_after: unknown; first_of_day: unknown; is_low: unknown; paused: unknown;
                 }>`
                     WITH ${baseCtes(session, today)},
                     running AS (
@@ -143,8 +156,8 @@ export function createTimelineRepository(session: ReadModelSession) {
                                 ORDER BY day, created_at, id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
                             ) AS balance_after,
                             ROW_NUMBER() OVER (PARTITION BY day ORDER BY created_at DESC, id DESC) AS from_day_end
-                        FROM typed
-                        WHERE kind = 'planned' AND day <= max(${lowThrough}, ${end})
+                        FROM counted
+                        WHERE day <= max(${lowThrough}, ${end})
                     ),
                     low_day AS (
                         SELECT day FROM running
@@ -168,6 +181,7 @@ export function createTimelineRepository(session: ReadModelSession) {
                         placed.status,
                         placed.kind,
                         placed.section,
+                        placed.paused,
                         running.balance_after,
                         ROW_NUMBER() OVER (
                             PARTITION BY placed.section, placed.day ORDER BY placed.created_at, placed.id
@@ -192,6 +206,7 @@ export function createTimelineRepository(session: ReadModelSession) {
                 kind: row.kind,
                 section: toNumber(row.section) as TimelineSection,
                 balanceAfter: toNullableNumber(row.balance_after),
+                paused: toNumber(row.paused) === 1,
                 firstOfDay: toNumber(row.first_of_day) === 1,
                 isLow: toNumber(row.is_low) === 1,
             }));
@@ -220,7 +235,7 @@ export function createTimelineRepository(session: ReadModelSession) {
                             SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) AS income,
                             SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) AS expense
                         FROM typed
-                        WHERE day >= ${from} AND day <= ${to} AND CASE ${show}
+                        WHERE day >= ${from} AND day <= ${to} AND transfer = 0 AND paused = 0 AND CASE ${show}
                             WHEN 'all' THEN kind = 'planned' OR substr(day, 1, 7) < substr(${today}, 1, 7)
                             ELSE kind = ${show}
                         END
@@ -231,10 +246,10 @@ export function createTimelineRepository(session: ReadModelSession) {
                         COALESCE(month_flows.income, 0) AS income,
                         COALESCE(month_flows.expense, 0) AS expense,
                         (SELECT amount FROM asset_total) + COALESCE((
-                            SELECT SUM(amount) FROM typed WHERE kind = 'planned' AND substr(day, 1, 7) < months.month
+                            SELECT SUM(amount) FROM counted WHERE substr(day, 1, 7) < months.month
                         ), 0) AS start_balance,
                         (SELECT amount FROM asset_total) + COALESCE((
-                            SELECT SUM(amount) FROM typed WHERE kind = 'planned' AND substr(day, 1, 7) <= months.month
+                            SELECT SUM(amount) FROM counted WHERE substr(day, 1, 7) <= months.month
                         ), 0) AS end_balance
                     FROM months
                     LEFT JOIN month_flows ON month_flows.month = months.month
