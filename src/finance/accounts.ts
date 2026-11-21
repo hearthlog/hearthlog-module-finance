@@ -6,7 +6,7 @@
 
 import { differenceInCalendarDays, differenceInMinutes, format, parseISO } from 'date-fns';
 import { formatAmount } from '@hearthlog/sdk/format';
-import { bankInfo, PROVIDER_LABELS, type BankInfo, type BankProvider } from './banks.js';
+import { bankInfo, type BankInfo, type BankProvider } from './banks.js';
 
 /** The asset fields this reads; the generated row type has them all. */
 export interface AccountAsset {

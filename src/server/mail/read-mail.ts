@@ -6,7 +6,7 @@
  */
 
 import { verifyDkim, type DkimSummary, type KeyLookup } from './dkim.js';
-import { decodeHeaderText, headerValue, parseMail } from './mime.js';
+import { decodeHeaderText, headerValue, parseMail, type Mail } from './mime.js';
 import { htmlToText, labelValueRows } from '../../finance/bank-parsers/html.js';
 import { PARSERS } from '../../finance/bank-parsers/index.js';
 import type { BankParser, ParsedEmail, ParserInput } from '../../finance/bank-parsers/types.js';
@@ -25,7 +25,8 @@ interface MailBase {
 
 export type MailReading = MailBase & (
     | { kind: 'payment'; parser: string; bank: string; parsed: ParsedEmail }
-    | { kind: 'confirmation'; code: string }
+    /** `verified` is false when the forwarding service's signature could not be checked; the code is shown either way. */
+    | { kind: 'confirmation'; code: string; verified: boolean; reason: string }
     | { kind: 'unread'; bank: string | null; reason: string }
 );
 
@@ -42,6 +43,28 @@ const GMAIL_FORWARDING = 'forwarding-noreply@google.com';
 function domainMatches(domain: string, parser: BankParser): boolean {
     const d = domain.toLowerCase();
     return parser.domains.some((candidate) => d === candidate || d.endsWith(`.${candidate}`));
+}
+
+/**
+ * Why a signature was not trusted, in a line that fits the mail's record: each signature with its domain and the
+ * check that failed, and what the receiving server (Cloudflare) concluded, when the mail carries its verdict.
+ * Kept so a failure can be told apart from a forged mail without keeping the raw message.
+ */
+export function describeSignatures(dkim: DkimSummary, mail: Mail): string {
+    const own = dkim.checks.length
+        ? dkim.checks.map((check) => `${check.domain || '?'} (s=${check.selector || '?'}, ${check.algorithm || '?'}, ${check.canonicalization}): ${check.status}${check.reason ? `, ${check.reason}` : ''}${check.alignedWithFrom ? '' : ', not the From domain'}`).join('; ')
+        : `no signature (From domain ${dkim.fromDomain || '?'})`;
+    const verdicts = mail.headers
+        .filter((field) => /^(arc-)?authentication-results$/i.test(field.name))
+        .slice(0, 2)
+        .map((field) => {
+            const value = field.rawValue.replace(/\s+/g, ' ').trim();
+            const server = value.replace(/^i=\d+;\s*/, '').split(';')[0]?.trim() ?? '?';
+            const results = [...value.matchAll(/\b(dkim|spf|dmarc|arc)=([a-z]+)(?:[^;]*?header\.(?:d|from)=([^\s;]+))?/gi)]
+                .map((match) => `${match[1]!.toLowerCase()}=${match[2]!.toLowerCase()}${match[3] ? ` ${match[3]}` : ''}`);
+            return `${field.name} by ${server}: ${results.join(', ') || 'no results'}`;
+        });
+    return [`Own check: ${own}`, verdicts.length ? `Received with ${verdicts.join(' | ')}` : 'No Authentication-Results header'].join('. ').slice(0, 900);
 }
 
 function addressOf(from: string): string {
@@ -72,12 +95,19 @@ export async function readMail(bytes: Uint8Array, options: ReadOptions = {}): Pr
 
     if (addressOf(from) === GMAIL_FORWARDING) {
         const code = `${subject}\n${text}`.match(/\(#(\d{6,12})\)|(?:confirmation code|kód pro potvrzení)[^\d]{0,20}(\d{6,12})/i);
-        if (signed === 'google.com' && code) return { ...base, kind: 'confirmation', code: (code[1] ?? code[2])! };
-        return { ...base, kind: 'unread', bank: null, reason: 'A forwarding message that could not be verified' };
+        const verified = signed === 'google.com' || !!signed?.endsWith('.google.com');
+        // The code is only ever pasted back into the mailbox, which checks it itself, so an unverified one is shown too.
+        if (code) return { ...base, kind: 'confirmation', code: (code[1] ?? code[2])!, verified, reason: verified ? 'Forwarding confirmation' : `Forwarding confirmation, signature not verified. ${describeSignatures(dkim, mail)}` };
+        return { ...base, kind: 'unread', bank: null, reason: `A forwarding message without a code. ${describeSignatures(dkim, mail)}` };
     }
 
     if (!signed) {
-        return { ...base, kind: 'unread', bank: claimed?.bank ?? null, reason: claimed ? `Not signed by ${claimed.bank}, so it was not trusted` : 'Not from a bank Finance reads' };
+        return {
+            ...base,
+            kind: 'unread',
+            bank: claimed?.bank ?? null,
+            reason: claimed ? `Not signed by ${claimed.bank}, so it was not trusted. ${describeSignatures(dkim, mail)}` : `Not from a bank Finance reads. ${describeSignatures(dkim, mail)}`,
+        };
     }
     const input: ParserInput = { subject, from, domain: signed, html, text: html ? htmlToText(html) : plain, rows: html ? labelValueRows(html) : [] };
     const parser = PARSERS.find((candidate) => domainMatches(signed, candidate) && candidate.matches(input));

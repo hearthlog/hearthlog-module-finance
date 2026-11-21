@@ -86,7 +86,7 @@ async function setAside(context: BankMailContext, reading: MailReading & { kind:
     const bank = reading.kind === 'unread' && reading.bank ? bankOfParser(reading.bank) : null;
     const mailId = await deterministicUuid('finance-bank-mail', context.integration.id, mailKey);
     const connectionId = bank ? await connectionIdFor(context.integration.id, bank.id) : '';
-    const reason = reading.kind === 'unread' ? reading.reason : 'Forwarding confirmation';
+    const reason = reading.reason;
     await upsert(context.integration, 'bank_mail', mailId, mailKey, context.now, (base) => base === undefined
         ? {
             type: 'BANK_MAIL_ADDED',

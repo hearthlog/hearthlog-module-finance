@@ -56,6 +56,12 @@
     const bank = $derived<BankInfo>(BANK_LIST.find((candidate) => candidate.id === bankId) ?? BANK_LIST[0]!);
     const address = $derived(addresses?.[0]?.address ?? "");
     const confirmation = $derived(mails.find((mail) => mail.mail_kind === "confirmation" && mail.status === "open") ?? null);
+    const confirmationUnverified = $derived(!!confirmation && confirmation.reason.startsWith("Forwarding confirmation, signature not verified"));
+    /** Mails that reached the address but could not be read, since shortly before this step opened: shown, never lost. */
+    const unreadSince = $derived(openedAt
+        ? mails.filter((mail) => mail.mail_kind === "unread" && mail.status === "open" && (mail.received_at ?? "") >= new Date(Date.parse(openedAt) - 30 * 60_000).toISOString())
+        : []);
+    let openUnreadId = $state<string | null>(null);
     /** The bank's connection, once a mail reached it after this step opened (every mail refreshes it, a late one too). */
     const reached = $derived(openedAt ? connections.find((connection) => connection.bank === bankId && (connection.last_sync_at ?? "") >= openedAt) ?? null : null);
     /** The account that mail is about: the connection's most recently refreshed one. */
@@ -169,8 +175,21 @@
                     <span>Your mailbox sent a confirmation code to this address:</span>
                     <span class="copy-row"><code class="code">{confirmation.code}</code><Button size="sm" variant="secondary" onclick={() => copy(confirmation.code, "code")}>{copied === "code" ? "Copied" : "Copy"}</Button></span>
                     <small class="muted">Paste it back in your mailbox's forwarding settings to finish turning forwarding on.</small>
+                    {#if confirmationUnverified}<small class="muted">Finance could not verify who sent this message. The code is only useful in your mailbox's settings, which check it themselves.</small>{/if}
                 </div>
             {/if}
+            {#each unreadSince as mail (mail.id)}
+                <div class="panel unread">
+                    <button type="button" class="unread-head" aria-expanded={openUnreadId === mail.id} onclick={() => (openUnreadId = openUnreadId === mail.id ? null : mail.id)}>
+                        <b>A message arrived that Finance could not read</b>
+                        <small>{mail.subject || "No subject"} · {mail.reason.split(". ")[0]}</small>
+                    </button>
+                    {#if openUnreadId === mail.id}
+                        <pre class="unread-text">{mail.body_text}</pre>
+                        <small class="muted">{mail.reason}</small>
+                    {/if}
+                </div>
+            {/each}
             {#if arrived}
                 <div class="panel ok">First email arrived at {format(parseISO(reached?.last_sync_at ?? arrived.synced_at), "HH:mm")} · from {bank.name}, signed by the bank, layout known</div>
             {:else}
@@ -249,6 +268,9 @@
     .panel { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px; background: var(--stor-surface-muted); font-size: 13px; }
     .panel.ok { background: var(--stor-positive-soft, var(--stor-surface-muted)); color: var(--stor-positive); font-weight: 600; }
     .panel.waiting { color: var(--stor-muted-text); }
+    .panel.unread { background: var(--stor-warning-soft); }
+    .unread-head { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: 0; background: transparent; padding: 0; text-align: left; color: inherit; }
+    .unread-text { max-height: 12rem; overflow: auto; margin: 0; padding: 8px; border-radius: 8px; background: var(--stor-surface); font: 12px/17px inherit; white-space: pre-wrap; }
     select { height: 38px; border: 1px solid var(--stor-field-border); border-radius: 9px; background: var(--stor-surface); color: inherit; font: inherit; }
     .segment { display: inline-flex; align-self: flex-start; padding: 3px; border-radius: 10px; background: var(--stor-surface-muted); }
     .segment label { padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
