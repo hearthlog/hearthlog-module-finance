@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Asset, Transaction } from '@hearthlog/sdk/data';
 import { parseAirBankStatement } from './statements/airbank.js';
+import { parseCsasStatement } from './statements/csas.js';
 import type { Line } from './statements/pdf.js';
 import { planFromParsed } from './statement-import.js';
 import { transactionIdFor } from './bank-ids.js';
@@ -81,5 +82,64 @@ describe('ČSOB statement', () => {
         const plan = await planFromParsed(parsed, [], { ids: new Set(), rows: [] });
         expect(plan.asset).toBeNull();
         expect(plan.accountDisplay).toBe('123456702/0300');
+    });
+});
+
+describe('Česká spořitelna statement', () => {
+    // Laid out like George's statement: a row's first line has the booking date, item, counterparty, VS and amount;
+    // under it the execution date, constant and specific symbols and the description.
+    const statement = () => parseCsasStatement([
+        line(810, [173, 'Výpis z účtu']),
+        line(798, [173, 'Standard účet České spořitelny'], [415, 'Období: 01.10.2026 - 31.10.2026']),
+        line(786, [173, 'Číslo účtu/kód banky: 1111111111/0800'], [485, 'Číslo výpisu: 010']),
+        line(740, [43, 'Měna účtu: CZK']),
+        line(707, [43, 'Číslo účtu (IBAN): CZ14 0800 0000 0011 1111 1111']),
+        line(569, [43, 'Počáteční zůstatek:'], [231, '1 000.00']),
+        line(559, [43, 'Celkem přišlo:'], [210, '600.00']),
+        line(550, [43, 'Celkem odešlo:'], [213, '-350.10']),
+        line(540, [43, 'Konečný zůstatek:'], [214, '1 249.90']),
+        line(516, [48, 'PŘEHLED POHYBŮ NA ÚČTU'], [244, 'Počáteční zůstatek:'], [528, '1 000.00']),
+        line(503, [48, 'Zaúčtováno'], [99, 'Položka'], [244, 'Číslo protiúčtu'], [398, 'Variabilní symbol'], [522, 'Částka']),
+        line(493, [48, 'Provedeno'], [244, 'Název protiúčtu'], [398, 'Konstantní symbol']),
+        line(474, [99, 'Popis']),
+        line(459, [48, '03.10.2026'], [99, 'Tuzemská odchozí úhrada'], [244, '2222222222/0800'], [398, '1234'], [519, '-350.00']),
+        line(450, [398, '0308']),
+        line(437, [99, 'OBJEDNAVKA 1234 NA EXAMPLE.CZ']),
+        line(425, [48, '04.10.2026'], [99, 'Převod kartou'], [516, '+600.00']),
+        line(416, [398, '0308']),
+        line(414, [48, '03.10.2026']),
+        line(405, [398, '9999']),
+        line(392, [99, 'XXXXXXXXXXXX0042 d.tran.03.10.2026'], [326, 'SOMEONE']),
+        line(370, [48, '08.10.2026'], [99, 'Úrok z prodlení'], [528, '-0.10']),
+        line(360, [48, '07.10.2026']),
+        line(48, [462, 'Pokračování na další straně']),
+        { page: 2, y: 749, cells: [[48, 'Zaúčtováno'], [99, 'Položka'], [244, 'Číslo protiúčtu'], [398, 'Variabilní symbol'], [522, 'Částka']].map(([x, text]) => ({ x: x as number, text: text as string })) },
+        { page: 2, y: 658, cells: [{ x: 48, text: '31.10.2026' }, { x: 99, text: 'Ceny za služby' }] },
+        { page: 2, y: 646, cells: [{ x: 99, text: 'Cena za vedení účtu' }, { x: 530, text: '0.00' }] },
+        { page: 2, y: 632, cells: [{ x: 244, text: 'Konečný zůstatek:' }, { x: 509, text: '1 249.90' }] },
+        { page: 2, y: 604, cells: [{ x: 48, text: 'NEPROVEDENÉ POLOŽKY' }] },
+        { page: 2, y: 556, cells: [{ x: 48, text: '29.10.2026' }, { x: 99, text: 'Vyřazení čekající platby' }, { x: 512, text: '-1 500.00' }] },
+        { page: 2, y: 35, cells: [{ x: 42, text: 'Česká spořitelna, a.s., Praha 4' }] },
+    ]);
+
+    it('reads rows over several lines, leaves out payments not made, and proves them against the totals', () => {
+        const parsed = statement();
+        expect(parsed.iban).toBe('CZ1408000000001111111111');
+        expect(parsed.rows.map((r) => [r.bookingDate, r.executionDate, r.kind, r.counterpartyName, r.counterpartyAccount, r.variableSymbol, r.constantSymbol, r.specificSymbol, r.amount])).toEqual([
+            ['2026-10-03', null, 'Tuzemská odchozí úhrada', null, '2222222222/0800', '1234', '0308', null, -350],
+            ['2026-10-04', '2026-10-03', 'Převod kartou', 'SOMEONE', null, null, '0308', '9999', 600],
+            ['2026-10-08', '2026-10-07', 'Úrok z prodlení', null, null, null, null, null, -0.1],
+            ['2026-10-31', null, 'Ceny za služby', null, null, null, null, null, 0],
+        ]);
+        expect(parsed.rows[0]!.details).toBe('OBJEDNAVKA 1234 NA EXAMPLE.CZ');
+        expect(parsed.checks.every((check) => check.ok)).toBe(true);
+        expect(parsed.checks.some((check) => check.label.includes('reference'))).toBe(false);
+    });
+
+    it('finds a mail row on the execution date when booking came a day later', async () => {
+        const linked = { id: 'cs', name: 'Spořitelna', amount: 1249.9, link: 'bank', account_hash: 'CZ1408000000001111111111' } as unknown as Asset;
+        const mailRow = { id: 'm1', due_date: '2026-10-03', amount: 600, bank_ref: 'mail:<a@x>' } as unknown as Transaction;
+        const plan = await planFromParsed(statement(), [linked], { ids: new Set(), rows: [mailRow] });
+        expect(plan.rows.map((entry) => entry.status)).toEqual(['new', 'matched', 'new', 'new']);
     });
 });

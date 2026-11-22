@@ -38,6 +38,7 @@
     const INSTRUCTIONS: Record<string, string> = {
         csob: "In ČSOB internet banking, turn on the “Moje info” email notice for every payment on the account, incoming and outgoing.",
         airbank: "In the Air Bank app, turn on email notifications for every payment on the account, incoming and outgoing.",
+        csas: "In George, turn on email notifications for incoming and outgoing payments on the account.",
     };
 
     let step = $state(1);

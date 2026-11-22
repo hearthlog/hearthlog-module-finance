@@ -1,0 +1,24 @@
+Date: Sun, 22 Nov 2026 07:14:04 +0100 (CET)
+From: =?UTF-8?Q?=C4=8Cesk=C3=A1_spo=C5=99itelna?= <ceskasporitelna@csas.cz>
+To: someone@example.com
+Subject: =?UTF-8?Q?Ode=C5=A1la_platba?=
+Message-ID: <synthetic-csas-1@example.invalid>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+<html><body><table><tr><td>
+<p>Dobrý den,</p>
+<p>z účtu 1111111111/0800 odešla platba ve výši 1&nbsp;250,50 Kč .</p>
+<p>Na účtu zůstává k dispozici 3&nbsp;749,50 Kč.</p>
+<p>Vaše Česká spořitelna</p>
+<h2>Informace o transakci</h2>
+<p>Datum a čas platby: 22. 11. 2026 07:11</p>
+<p>Směr platby: odchozí</p>
+<p>Z účtu: 1111111111/0800</p>
+<p>Na účet: 2222222222/0800</p>
+<p>Částka v měně transakce: 1&nbsp;250,50 Kč</p>
+<p>Částka v měně účtu: 1&nbsp;250,50 Kč</p>
+<p>Variabilní symbol: 42</p>
+<p>Bezpečí Vašich peněz je pro nás na prvním místě.</p>
+</td></tr></table></body></html>

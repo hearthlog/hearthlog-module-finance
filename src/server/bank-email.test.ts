@@ -204,3 +204,25 @@ describe('why a signature was not trusted', () => {
         expect(text).toBe('Own check: google.com (s=20230601, rsa-sha256, relaxed/relaxed): fail, The body changed after the bank signed it. Received with ARC-Authentication-Results by mx.cloudflare.net: dkim=pass google.com, spf=pass, dmarc=pass google.com');
     });
 });
+
+describe('Česká spořitelna notification', () => {
+    it('becomes the account with its available balance and one row named by the message', async () => {
+        const ledger = fakeLedger();
+        const outcome = await run(ledger, memoryBankState(), fixture('csas-payment.eml'), 'csas.cz');
+        const account = 'CZ1408000000001111111111';
+        expect(outcome).toMatchObject({ kind: 'payment', gap: 0 });
+        expect(ledger.state(`asset:${outcome.kind === 'payment' ? outcome.assetId : ''}`)).toMatchObject({
+            name: 'Česká spořitelna ••1111', amount: 3749.5, account_hash: account, balance_type: 'available',
+        });
+        // No transaction code in these mails: the statement finds the row again by day and amount.
+        const transactionId = await transactionIdFor(account, 'mail:<synthetic-csas-1@example.invalid>');
+        expect(ledger.state(`transaction:${transactionId}`)).toMatchObject({
+            amount: -1250.5, due_date: '2026-11-22', counterparty: '2222222222/0800', review: 'new',
+        });
+    });
+
+    it('is not trusted without the bank\'s signature', async () => {
+        const outcome = await run(fakeLedger(), memoryBankState(), fixture('csas-payment.eml'), null);
+        expect(outcome.kind).toBe('set-aside');
+    });
+});
