@@ -73,6 +73,19 @@ export interface BalanceRange {
     max: number;
 }
 
+export interface RunwayPoint {
+    date: string;
+    balance: number;
+    isToday?: boolean;
+}
+
+export interface MonthFlow {
+    income: number;
+    expense: number;
+}
+
+export type CategoryActuals = Record<string, { income: number; expense: number }>;
+
 export interface TimelineRowsOptions {
     today: string;
     start: string;
@@ -325,6 +338,84 @@ export function createTimelineRepository(session: ReadModelSession) {
             );
             const row = result.rows[0];
             return { min: toNumber(row?.min_balance), max: toNumber(row?.max_balance) };
+        },
+
+        /** Day-end projected balance points from today forward for the compact runway sparkline. */
+        async getRunwayPoints(options: { today: string; limit?: number }): Promise<RunwayPoint[]> {
+            const { today, limit = 60 } = options;
+            const result = await withTimeout(
+                session.execute(sql<{ day: string; balance: unknown; is_today: unknown }>`
+                    WITH ${dayEndCtes(session, today)}
+                    SELECT ${today} AS day, (SELECT amount FROM asset_total) AS balance, 1 AS is_today
+                    UNION ALL
+                    SELECT day, balance, 0 AS is_today FROM (
+                        SELECT day, balance FROM day_end ORDER BY day ASC LIMIT ${limit}
+                    )
+                `),
+                DB_TIMEOUT_MS,
+                'Timeline runway query timed out',
+            );
+            const points: RunwayPoint[] = [];
+            for (const row of result.rows) {
+                const date = String(row.day);
+                const balance = toNumber(row.balance);
+                const isToday = toNumber(row.is_today) === 1;
+                if (points.length > 0 && points[points.length - 1].date === date) {
+                    points[points.length - 1] = { date, balance, isToday: points[points.length - 1].isToday || isToday };
+                } else {
+                    points.push({ date, balance, isToday });
+                }
+            }
+            return points;
+        },
+
+        /** Total non-transfer income and expense in a single calendar month (`YYYY-MM`). */
+        async getMonthFlow(options: { today: string; month: string }): Promise<MonthFlow> {
+            const { today, month } = options;
+            const result = await withTimeout(
+                session.execute(sql<{ income: unknown; expense: unknown }>`
+                    WITH ${baseCtes(session, today)}
+                    SELECT
+                        COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) AS income,
+                        COALESCE(SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END), 0) AS expense
+                    FROM typed
+                    WHERE substr(day, 1, 7) = ${month} AND transfer = 0 AND paused = 0
+                `),
+                DB_TIMEOUT_MS,
+                'Timeline month flow query timed out',
+            );
+            const row = result.rows[0];
+            return {
+                income: toNumber(row?.income),
+                expense: toNumber(row?.expense),
+            };
+        },
+
+        /** Actual + planned non-transfer totals per category for a calendar month (`YYYY-MM`). */
+        async getCategoryActuals(options: { today: string; month: string }): Promise<CategoryActuals> {
+            const { today, month } = options;
+            const result = await withTimeout(
+                session.execute(sql<{ category: string; income: unknown; expense: unknown }>`
+                    WITH ${baseCtes(session, today)}
+                    SELECT
+                        category,
+                        COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) AS income,
+                        COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0) AS expense
+                    FROM typed
+                    WHERE substr(day, 1, 7) = ${month} AND transfer = 0 AND paused = 0
+                    GROUP BY category
+                `),
+                DB_TIMEOUT_MS,
+                'Category actuals query timed out',
+            );
+            const actuals: CategoryActuals = {};
+            for (const row of result.rows) {
+                actuals[String(row.category)] = {
+                    income: toNumber(row.income),
+                    expense: toNumber(row.expense),
+                };
+            }
+            return actuals;
         },
     };
 }

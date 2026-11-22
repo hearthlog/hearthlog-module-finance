@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "org.stor.finance",
   "package": "@hearthlog/module-finance",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "compatibility": {
     "moduleApi": 1
   },
@@ -11,8 +11,8 @@
       "id": "finance",
       "path": "/finance",
       "label": "Finance",
-      "subtitle": "Monthly transactions, forecast, and assets",
-      "keywords": "money transactions forecast assets wallet",
+      "subtitle": "Cash-flow runway, linked accounts, and recurring budgets",
+      "keywords": "money transactions forecast assets wallet cash flow recurring",
       "navGroup": "Money",
       "icon": "chart-line",
       "navOrder": 10,
@@ -21,13 +21,13 @@
       "children": [
         {
           "id": "transactions",
-          "label": "Transactions",
+          "label": "Cash Flow",
           "href": "/finance",
           "tab": null
         },
         {
           "id": "budget",
-          "label": "Budget plans",
+          "label": "Budget & Recurring",
           "href": "/finance?tab=budget",
           "tab": "budget"
         }

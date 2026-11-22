@@ -26,6 +26,8 @@
     import { MobilePageAction } from "@hearthlog/sdk/ui";
     import BudgetPlans from "../components/finance/BudgetPlans.svelte";
     import FinanceReadout from "../components/finance/FinanceReadout.svelte";
+    import FinanceRail from "../components/finance/FinanceRail.svelte";
+    import RunwaySparkline from "../components/finance/RunwaySparkline.svelte";
     import EndlessTimeline from "../components/finance/EndlessTimeline.svelte";
     import TransactionSelectionBar from "../components/finance/TransactionSelectionBar.svelte";
     import { TimelineMonths } from "../components/finance/timeline-months.svelte.js";
@@ -241,8 +243,8 @@
     }
 
     const financeTabs = $derived([
-        { label: "Transactions", href: contextualHref(`/finance/${year}/${month}`), active: !isBudgetTab },
-        { label: "Budget plans", href: contextualHref(`/finance/${year}/${month}?tab=budget`), active: isBudgetTab },
+        { label: "Cash Flow", href: contextualHref(`/finance/${year}/${month}`), active: !isBudgetTab },
+        { label: "Budget & Recurring", href: contextualHref(`/finance/${year}/${month}?tab=budget`), active: isBudgetTab },
     ]);
     const filters: Array<{ id: TimelineShow; label: string }> = [
         { id: "all", label: "All" },
@@ -290,6 +292,7 @@
     // Below 768 px the list is the page: one figure in the top bar, the rest in the Outlook sheet,
     // filters behind the options button, and rows without checkboxes until press and hold.
     const phone = new MediaQuery("max-width: 767px");
+    const desktopRail = new MediaQuery("min-width: 1024px");
     let phoneBalance = $state(false);
     let optionsOpen = $state(false);
     let assetsSheetOpen = $state(false);
@@ -748,11 +751,11 @@
                     {/each}
                 </nav>
                 {#if view.review.pending > 0}
-                    <button type="button" class="review-chip shrink-0" onclick={() => (reviewOpen = true)}><span class="n">{view.review.pending}</span>To review</button>
+                    <button type="button" class="review-chip shrink-0 lg:hidden" onclick={() => (reviewOpen = true)}><span class="n">{view.review.pending}</span>To review</button>
                 {/if}
                 {#if uncategorized > 0}
                     <CommandOnly>
-                        <Button variant="secondary" size="sm" class="shrink-0" onclick={openSort}>Sort {uncategorized} uncategorized</Button>
+                        <Button variant="secondary" size="sm" class="shrink-0 lg:hidden" onclick={openSort}>Sort {uncategorized} uncategorized</Button>
                     </CommandOnly>
                 {/if}
             </div>
@@ -785,116 +788,152 @@
             selectedPlanId={view.selectedPlanId}
             incomeSort={view.incomeSort}
             expenseSort={view.expenseSort}
+            {today}
+            categoryActuals={view.categoryActuals}
         />
     {:else}
-        <div class="flex min-h-0 flex-1 flex-col gap-2 px-2.5 pt-1 pb-2 sm:gap-3 sm:px-3 sm:pb-3">
-            <!-- Phones keep these figures in the Outlook sheet behind the top bar's figure. -->
-            <div class="hidden md:contents">
-                <FinanceReadout
-                    outlook={view.outlook}
-                    today={today}
-                    floor={floor}
+        <div class="flex min-h-0 flex-1 flex-col gap-2 px-2.5 pt-1 pb-2 sm:gap-3 sm:px-3 sm:pb-3 lg:grid lg:grid-cols-[minmax(0,1fr)_316px] lg:gap-4">
+            <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-2 sm:gap-3">
+                <!-- Phones keep these figures in the Outlook sheet behind the top bar's figure. -->
+                <div class="hidden md:contents">
+                    <FinanceReadout
+                        outlook={view.outlook}
+                        runway={view.runway}
+                        today={today}
+                        floor={floor}
+                        assets={view.assets}
+                        assetsSum={view.assetsSum}
+                        connections={view.connections}
+                        mails={view.mails}
+                        railVisible={desktopRail.current}
+                        onFloorChange={changeFloor}
+                        onJump={(date) => void goToDate(date, "planned")}
+                        onUpdateAssets={() => (assetsSheetOpen = true)}
+                    />
+                </div>
+
+                <!-- Compact mobile runway preview card -->
+                <div class="stor-panel shrink-0 px-3 py-2 md:hidden">
+                    <div class="mb-1 flex items-center justify-between text-[11px] text-[var(--stor-muted-text)]">
+                        <span>Runway ahead</span>
+                        <span class="font-semibold tabular-nums {view.outlook.low.amount < floor ? 'text-[var(--stor-negative)]' : 'text-[var(--stor-positive)]'}">
+                            Low {formatAmount(view.outlook.low.amount)} Kč
+                        </span>
+                    </div>
+                    <RunwaySparkline points={view.runway} outlook={view.outlook} {today} {floor} compact />
+                </div>
+
+                <div class="flex min-h-[18rem] flex-1 flex-col gap-2 sm:gap-3 lg:min-h-0">
+                    <div class="hidden shrink-0 md:block lg:hidden">{@render financePeriod()}</div>
+                    <!-- The list opens where the applied data says, so it waits for it. -->
+                    {#if displayResource.loading || !shown}
+                        <section class="stor-panel flex-1 p-4" aria-label="Transactions">
+                            <DataPlaceholder rows={8} label="Loading transactions" />
+                        </section>
+                    {:else}
+                        <!-- Below lg the list runs on under the page action, down to the dock. -->
+                        <section
+                            class="stor-panel flex min-h-0 flex-1 flex-col"
+                            aria-label="Transactions"
+                            data-under-action
+                            data-phone-balance={phoneBalance ? "on" : "off"}
+                            data-selecting={selectingNow ? "true" : "false"}
+                            use:longPress={{ selector: "[data-row-id]", onLongPress: startSelecting }}
+                            onclickcapture={selectingClick}
+                        >
+                            <!-- Phones: the month in view, what needs sorting, and the options; the list does the rest. -->
+                            <div class="flex h-12 shrink-0 items-center gap-1.5 border-b border-[color-mix(in_srgb,var(--stor-border)_62%,transparent)] pl-2 pr-1 md:hidden">
+                                <MonthNavigator
+                                    year={year}
+                                    month={month}
+                                    currentYear={Number(todayMonth.slice(0, 4))}
+                                    currentMonth={Number(todayMonth.slice(5, 7))}
+                                    onNavigate={(targetYear, targetMonth) => goToMonth(`${targetYear}-${String(targetMonth).padStart(2, "0")}`)}
+                                    compact
+                                    phoneArrows={false}
+                                    slide={false}
+                                    class="min-w-0"
+                                />
+                                {#if view.review.pending > 0}
+                                    <button type="button" class="ml-auto h-8 shrink-0 rounded-full bg-[var(--stor-accent-soft)] px-3 text-[12.5px] font-semibold text-[var(--stor-accent-text)]" onclick={() => (reviewOpen = true)}>{view.review.pending} to review</button>
+                                {:else if uncategorized > 0}
+                                    <CommandOnly>
+                                        <button type="button" class="ml-auto h-8 shrink-0 rounded-full bg-[var(--stor-warning-soft)] px-3 text-[12.5px] font-semibold text-[var(--stor-warning)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--stor-focus)]" onclick={openSort}>{uncategorized} to sort</button>
+                                    </CommandOnly>
+                                {/if}
+                                <button
+                                    type="button"
+                                    class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--stor-muted-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--stor-focus)] {view.review.pending > 0 || uncategorized > 0 ? '' : 'ml-auto'}"
+                                    aria-label="List options"
+                                    aria-haspopup="dialog"
+                                    data-testid="finance-list-options"
+                                    onclick={() => (optionsOpen = true)}
+                                >
+                                    <IconTune class="h-5 w-5" />
+                                    {#if show !== "all" || phoneBalance}<span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-[var(--stor-action)]" aria-hidden="true"></span>{/if}
+                                </button>
+                            </div>
+                            <TransactionSelectionBar
+                                selected={selectedRows}
+                                visibleCount={visibleRows.length}
+                                today={today}
+                                onClear={clearSelection}
+                                onSelectAll={selectAll}
+                                onMove={async (rows, date) => { await moveTransactions(rows, date); clearSelection(); }}
+                                onSetDone={async (rows, done) => {
+                                    const ids = rows.map((row) => row.id);
+                                    if (done) await markDone(ids);
+                                    else await restore(ids);
+                                    clearSelection();
+                                }}
+                                onDelete={async (rows) => { await removeTransactions(rows.map((row) => row.id)); clearSelection(); }}
+                            />
+                            <div class="min-h-0 flex-1">
+                                {#key show}
+                                    <EndlessTimeline
+                                        bind:this={timeline}
+                                        store={months}
+                                        today={today}
+                                        anchor={openingDay}
+                                        show={show}
+                                        bounds={bounds}
+                                        floor={floor}
+                                        available={view.outlook.available}
+                                        selectedIds={selectedIds}
+                                        busyId={busyId}
+                                        flashId={flashId}
+                                        hoveredId={hoveredId}
+                                        revision={revision}
+                                        onSelect={selectRow}
+                                        onEdit={openEditTransaction}
+                                        onMarkDone={markRowDone}
+                                        onRestore={restoreRow}
+                                        onDelete={deleteRow}
+                                        onHover={hoverRow}
+                                        onVisibleChange={followVisible}
+                                    />
+                                {/key}
+                            </div>
+                        </section>
+                    {/if}
+                </div>
+            </div>
+
+            <!-- Persistent Right Rail on Desktop: Attention, Accounts & Sync Health, Monthly Flow -->
+            <div class="hidden min-h-0 lg:flex lg:flex-col">
+                <FinanceRail
                     assets={view.assets}
                     assetsSum={view.assetsSum}
                     connections={view.connections}
                     mails={view.mails}
-                    onFloorChange={changeFloor}
-                    onJump={(date) => void goToDate(date, "planned")}
+                    {today}
+                    monthFlow={view.monthFlow}
+                    reviewPending={view.review.pending}
+                    {uncategorized}
+                    onOpenReview={() => (reviewOpen = true)}
+                    onOpenSort={openSort}
                     onUpdateAssets={() => (assetsSheetOpen = true)}
                 />
-            </div>
-
-            <div class="flex min-h-[18rem] flex-1 flex-col gap-2 sm:gap-3 lg:min-h-0">
-                <div class="hidden shrink-0 md:block lg:hidden">{@render financePeriod()}</div>
-                <!-- The list opens where the applied data says, so it waits for it. -->
-                {#if displayResource.loading || !shown}
-                    <section class="stor-panel flex-1 p-4" aria-label="Transactions">
-                        <DataPlaceholder rows={8} label="Loading transactions" />
-                    </section>
-                {:else}
-                    <!-- Below lg the list runs on under the page action, down to the dock. -->
-                    <section
-                        class="stor-panel flex min-h-0 flex-1 flex-col"
-                        aria-label="Transactions"
-                        data-under-action
-                        data-phone-balance={phoneBalance ? "on" : "off"}
-                        data-selecting={selectingNow ? "true" : "false"}
-                        use:longPress={{ selector: "[data-row-id]", onLongPress: startSelecting }}
-                        onclickcapture={selectingClick}
-                    >
-                        <!-- Phones: the month in view, what needs sorting, and the options; the list does the rest. -->
-                        <div class="flex h-12 shrink-0 items-center gap-1.5 border-b border-[color-mix(in_srgb,var(--stor-border)_62%,transparent)] pl-2 pr-1 md:hidden">
-                            <MonthNavigator
-                                year={year}
-                                month={month}
-                                currentYear={Number(todayMonth.slice(0, 4))}
-                                currentMonth={Number(todayMonth.slice(5, 7))}
-                                onNavigate={(targetYear, targetMonth) => goToMonth(`${targetYear}-${String(targetMonth).padStart(2, "0")}`)}
-                                compact
-                                phoneArrows={false}
-                                slide={false}
-                                class="min-w-0"
-                            />
-                            {#if uncategorized > 0}
-                                <CommandOnly>
-                                    <button type="button" class="ml-auto h-8 shrink-0 rounded-full bg-[var(--stor-warning-soft)] px-3 text-[12.5px] font-semibold text-[var(--stor-warning)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--stor-focus)]" onclick={openSort}>{uncategorized} to sort</button>
-                                </CommandOnly>
-                            {/if}
-                            <button
-                                type="button"
-                                class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--stor-muted-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--stor-focus)] {uncategorized > 0 ? '' : 'ml-auto'}"
-                                aria-label="List options"
-                                aria-haspopup="dialog"
-                                data-testid="finance-list-options"
-                                onclick={() => (optionsOpen = true)}
-                            >
-                                <IconTune class="h-5 w-5" />
-                                {#if show !== "all" || phoneBalance}<span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-[var(--stor-action)]" aria-hidden="true"></span>{/if}
-                            </button>
-                        </div>
-                        <TransactionSelectionBar
-                            selected={selectedRows}
-                            visibleCount={visibleRows.length}
-                            today={today}
-                            onClear={clearSelection}
-                            onSelectAll={selectAll}
-                            onMove={async (rows, date) => { await moveTransactions(rows, date); clearSelection(); }}
-                            onSetDone={async (rows, done) => {
-                                const ids = rows.map((row) => row.id);
-                                if (done) await markDone(ids);
-                                else await restore(ids);
-                                clearSelection();
-                            }}
-                            onDelete={async (rows) => { await removeTransactions(rows.map((row) => row.id)); clearSelection(); }}
-                        />
-                        <div class="min-h-0 flex-1">
-                            {#key show}
-                                <EndlessTimeline
-                                    bind:this={timeline}
-                                    store={months}
-                                    today={today}
-                                    anchor={openingDay}
-                                    show={show}
-                                    bounds={bounds}
-                                    floor={floor}
-                                    available={view.outlook.available}
-                                    selectedIds={selectedIds}
-                                    busyId={busyId}
-                                    flashId={flashId}
-                                    hoveredId={hoveredId}
-                                    revision={revision}
-                                    onSelect={selectRow}
-                                    onEdit={openEditTransaction}
-                                    onMarkDone={markRowDone}
-                                    onRestore={restoreRow}
-                                    onDelete={deleteRow}
-                                    onHover={hoverRow}
-                                    onVisibleChange={followVisible}
-                                />
-                            {/key}
-                        </div>
-                    </section>
-                {/if}
             </div>
         </div>
     {/if}
@@ -914,12 +953,13 @@
             sheet
             onUpdateAssets={() => (assetsSheetOpen = true)}
             outlook={view.outlook}
+            runway={view.runway}
             today={today}
             floor={floor}
             assets={view.assets}
             assetsSum={view.assetsSum}
             connections={view.connections}
-                    mails={view.mails}
+            mails={view.mails}
             onFloorChange={changeFloor}
         />
     </PhoneGlance>

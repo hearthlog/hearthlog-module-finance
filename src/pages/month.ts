@@ -3,7 +3,7 @@ import type { ModuleLoadEvent } from '@hearthlog/sdk/runtime';
 import type { Asset, BankConnection, BankMail } from '../data/assets.js';
 import type { BudgetItem } from '@hearthlog/sdk/data';
 import type { BudgetItemSort, BudgetPlanSummary } from '../data/budgets.js';
-import type { BalanceRange, TimelineOutlook } from '../data/finance-timeline.js';
+import type { BalanceRange, CategoryActuals, MonthFlow, RunwayPoint, TimelineOutlook } from '../data/finance-timeline.js';
 import { queryDatabase } from '@hearthlog/sdk/data';
 import { parseBudgetItemSort } from '../data/budgets.js';
 import { loadBalanceFloor } from '../finance/floor.js';
@@ -18,6 +18,12 @@ export interface FinancePageData {
     outlook: TimelineOutlook;
     /** Lowest and highest balance over all history and every plan: one fixed scale. */
     range: BalanceRange;
+    /** Projected day-end balance points from today forward for the compact runway sparkline. */
+    runway: RunwayPoint[];
+    /** Current month's non-transfer income and expense totals for the flow pulse. */
+    monthFlow: MonthFlow;
+    /** Per-category income/expense totals in the current month for Budget-vs-Actual bars. */
+    categoryActuals: CategoryActuals;
     floor: number;
     assets: Asset[];
     assetsSum: number;
@@ -42,6 +48,9 @@ function emptyData(year: number, month: number): FinancePageData {
         today: '',
         outlook: { available: 0, low: { amount: 0, date: '' }, end: 0, endDate: null, lastDone: null },
         range: { min: 0, max: 0 },
+        runway: [],
+        monthFlow: { income: 0, expense: 0 },
+        categoryActuals: {},
         floor: 0,
         assets: [],
         assetsSum: 0,
@@ -78,11 +87,15 @@ const loadData = async (
         assetsReady,
         loadBalanceFloor(),
         queryDatabase(async (repositories) => {
-            const [outlook, range, review, budgetPlans] = await Promise.all([
+            const currentMonth = today.slice(0, 7);
+            const [outlook, range, runway, monthFlow, review, budgetPlans, categoryActuals] = await Promise.all([
                 repositories.timeline.getOutlook({ today }),
                 repositories.timeline.getRange({ today }),
+                repositories.timeline.getRunwayPoints({ today }),
+                repositories.timeline.getMonthFlow({ today, month: currentMonth }),
                 repositories.transactions.countReview(),
                 isBudgetTab ? repositories.budgets.getPlans() : Promise.resolve([] as BudgetPlanSummary[]),
+                isBudgetTab ? repositories.timeline.getCategoryActuals({ today, month: currentMonth }) : Promise.resolve({} as CategoryActuals),
             ]);
             const selectedPlan = budgetPlans.find((plan) => plan.id === requestedPlanId) ?? budgetPlans[0];
             const [budgetIncomeItems, budgetExpenseItems] = selectedPlan
@@ -91,7 +104,7 @@ const loadData = async (
                     repositories.budgets.getPlanItems(selectedPlan.id, 'expense', expenseSort),
                 ])
                 : [[], []];
-            return { outlook, range, review, budgetPlans, budgetIncomeItems, budgetExpenseItems, selectedPlanId: selectedPlan ? selectedPlan.id : null };
+            return { outlook, range, runway, monthFlow, categoryActuals, review, budgetPlans, budgetIncomeItems, budgetExpenseItems, selectedPlanId: selectedPlan ? selectedPlan.id : null };
         }),
     ]);
 
