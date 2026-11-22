@@ -12,11 +12,10 @@ import type { EbAccount, EbStateStore } from '../bank-state.js';
 import { ebCall, type EbConfig, type PsuHeaders } from './client.js';
 import type { RateLookup } from './rates.js';
 import { syncSession, type SyncOutcome } from './sync.js';
+import { APPROVAL_BANKS } from './banks.js';
 
-/** The banks linked this way: Enable Banking's name for each, in Czechia. */
-export const APPROVAL_BANKS: Record<string, { aspsp: string; country: string; label: string }> = {
-    revolut: { aspsp: 'Revolut', country: 'CZ', label: 'Revolut' },
-};
+
+export { APPROVAL_BANKS };
 
 const MAX_DAYS = 180;
 
