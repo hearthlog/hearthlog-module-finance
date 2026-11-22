@@ -35,7 +35,7 @@ function fakeEnableBanking(options: FakeOptions = {}) {
         calls.push({ method: init?.method ?? 'GET', path: url.pathname, query: Object.fromEntries(url.searchParams), psu: headers.has('Psu-Ip-Address') });
         if (state.expired && url.pathname.startsWith('/accounts/')) return Response.json({ error: 'EXPIRED_SESSION', message: 'Session expired' }, { status: 401 });
         if (state.rateLimited && url.pathname.startsWith('/accounts/')) return Response.json({ error: 'ASPSP_RATE_LIMIT_EXCEEDED', message: 'Limit' }, { status: 429 });
-        if (url.pathname === '/aspsps') return Response.json({ aspsps: [{ name: 'Revolut', country: 'CZ', maximum_consent_validity: 90 * 86_400 }] });
+        if (url.pathname === '/aspsps') return Response.json({ aspsps: [{ name: 'Revolut', country: 'LT', maximum_consent_validity: 90 * 86_400 }] });
         if (url.pathname === '/auth') return Response.json({ url: 'https://bank.example/approve?id=1' });
         if (url.pathname === '/sessions') {
             return Response.json({

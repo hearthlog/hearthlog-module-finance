@@ -16,6 +16,7 @@ import { upsert } from '../bank-email.js';
 import { ebCall, EbError, type EbConfig, type PsuHeaders } from './client.js';
 import { chooseBalance, toFinanceRow, type EbBalance, type EbTransaction } from './map.js';
 import type { RateLookup } from './rates.js';
+import { APPROVAL_BANKS } from './banks.js';
 
 export const BACKGROUND_EVERY_HOURS = 6;
 export const PRESENT_EVERY_MINUTES = 5;
@@ -61,7 +62,7 @@ async function writeConnection(context: SyncContext, fields: Record<string, unkn
     const id = await connectionIdFor(integration.id, session.bank);
     const key = `eb-sync:${now}`;
     await upsert(integration, 'bank_connection', id, key, now, (base) => base === undefined
-        ? { type: 'BANK_CONNECTION_ADDED', payload: { bank: session.bank, provider: 'enable_banking', country: 'CZ', valid_until: session.validUntil, status: 'active', last_error: '', ...fields } }
+        ? { type: 'BANK_CONNECTION_ADDED', payload: { bank: session.bank, provider: 'enable_banking', country: APPROVAL_BANKS[session.bank]?.country ?? '', valid_until: session.validUntil, status: 'active', last_error: '', ...fields } }
         : { type: 'BANK_CONNECTION_UPDATED', payload: fields });
 }
 
