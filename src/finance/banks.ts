@@ -15,6 +15,7 @@ export interface BankInfo {
 const BANKS: Record<string, BankInfo> = {
     csob: { id: 'csob', name: 'ČSOB', mark: 'ČS', provider: 'email', senderDomain: 'csob.cz' },
     airbank: { id: 'airbank', name: 'Air Bank', mark: 'AB', provider: 'email', senderDomain: 'airbank.cz' },
+    csas: { id: 'csas', name: 'Česká spořitelna', mark: 'SP', provider: 'email', senderDomain: 'csas.cz' },
     revolut: { id: 'revolut', name: 'Revolut', mark: 'RE', provider: 'enable_banking' },
 };
 

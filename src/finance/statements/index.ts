@@ -1,4 +1,5 @@
 import { isAirBankStatement, parseAirBankStatement } from './airbank.js';
+import { isCsasStatement, parseCsasStatement } from './csas.js';
 import { isCsobStatement, parseCsobStatement } from './csob.js';
 import { lineText, pdfLines } from './pdf.js';
 import type { ParsedStatement } from './types.js';
@@ -20,7 +21,10 @@ export async function analyzeStatement(bytes: Uint8Array): Promise<StatementAnal
     // PDF.js takes over the buffer while reading, so the size is noted first.
     const size = bytes.length;
     const { pages, lines } = await pdfLines(bytes);
-    const parsed = isAirBankStatement(lines) ? parseAirBankStatement(lines) : isCsobStatement(lines) ? parseCsobStatement(lines) : null;
+    const parsed = isAirBankStatement(lines) ? parseAirBankStatement(lines)
+        : isCsobStatement(lines) ? parseCsobStatement(lines)
+        : isCsasStatement(lines) ? parseCsasStatement(lines)
+        : null;
     return {
         format: 'pdf',
         bytes: size,

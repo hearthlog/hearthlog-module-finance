@@ -1,8 +1,8 @@
 /**
  * History from a bank statement, read in the browser: the PDF never leaves the device. A statement row becomes the
  * same entity a notification mail would have made when the bank uses one code for both (Air Bank), and otherwise is
- * matched against the mail rows already there by day and amount (ČSOB's statement code is not in its mails), so the
- * overlap between mails and a statement is never counted twice.
+ * matched against the mail rows already there by day and amount (ČSOB's statement code is not in its mails; Česká
+ * spořitelna prints none), so the overlap between mails and a statement is never counted twice.
  */
 
 import { executeLocalCommand, queryDatabase, type AddTransactionEvent, type Transaction } from '@hearthlog/sdk/data';
@@ -79,11 +79,14 @@ export async function planFromParsed(parsed: ParsedStatement, assets: readonly A
     }
     const rows: PlannedRow[] = planned.map((entry) => {
         if (known.ids.has(entry.id)) return { ...entry, status: 'exists' as const };
-        const key = `${entry.row.bookingDate}|${entry.row.amount.toFixed(2)}`;
-        const left = mailRows.get(key) ?? 0;
-        if (left > 0) {
-            mailRows.set(key, left - 1);
-            return { ...entry, status: 'matched' as const };
+        // A notice is dated when the payment happened, which can be the statement's execution date rather than its booking date.
+        for (const day of new Set([entry.row.bookingDate, entry.row.executionDate].filter(Boolean))) {
+            const key = `${day}|${entry.row.amount.toFixed(2)}`;
+            const left = mailRows.get(key) ?? 0;
+            if (left > 0) {
+                mailRows.set(key, left - 1);
+                return { ...entry, status: 'matched' as const };
+            }
         }
         return { ...entry, status: 'new' as const };
     });

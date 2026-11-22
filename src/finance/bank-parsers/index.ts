@@ -1,9 +1,10 @@
 import { airBankInfo } from './airbank.js';
+import { csasPayment } from './csas.js';
 import { csobMojeInfo } from './csob.js';
 import type { BankParser, ParserInput } from './types.js';
 
-/** First implementation: ČSOB and Air Bank. More banks later, one parser each. */
-export const PARSERS: BankParser[] = [csobMojeInfo, airBankInfo];
+/** One parser per bank layout. */
+export const PARSERS: BankParser[] = [csobMojeInfo, airBankInfo, csasPayment];
 
 export function pickParser(input: ParserInput): BankParser | null {
     const domain = input.domain.toLowerCase();
