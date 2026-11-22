@@ -168,7 +168,7 @@
                         <span class="truncate text-[var(--stor-ink)]">{account.name}</span>
                         <span class="sheet-detail {account.tone}">{account.tone === "ok" ? account.detail : account.stamp}</span>
                     </span>
-                    <b class="shrink-0 font-semibold tabular-nums" class:text-[var(--stor-faint-text)]={account.frozen}>{formatAmount(account.balance)} Kč</b>
+                    <b class="shrink-0 font-semibold tabular-nums" class:text-[var(--stor-faint-text)]={account.frozen}>{formatAmount(account.available)} Kč</b>
                 </button>
             {:else}
                 <div class="flex min-h-12 items-center justify-between gap-3 border-b border-[color-mix(in_srgb,var(--stor-border)_62%,transparent)] text-[15px]">

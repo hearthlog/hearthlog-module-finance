@@ -56,6 +56,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
             { name: "sync_issue", type: "string", payloadKey: "sync_issue", default: "", optionalInPayload: true },
             { name: "issue_count", type: "number", payloadKey: "issue_count", default: 0, optionalInPayload: true },
             { name: "issue_amount", type: "number", payloadKey: "issue_amount", default: null, optionalInPayload: true },
+            // An arranged overdraft, as a positive limit in Kč: the user's own figure, never written by a sync. It counts in
+            // Available now, so an account at −35 000 with a 50 000 limit adds 15 000 there.
+            { name: "overdraft", type: "number", payloadKey: "overdraft", default: 0, optionalInPayload: true },
         ],
         indexes: [{ name: "idx_assets_type", columns: ["asset_type"] }],
     },

@@ -48,7 +48,13 @@ export function unlinkAsset(asset: Pick<Asset, 'id'>): Promise<unknown> {
         balance_source: '',
         sync_issue: '',
         issue_count: 0,
+        overdraft: 0,
     });
+}
+
+/** Sets the arranged overdraft limit (a positive figure, 0 for none). It is the user's: no sync writes it. */
+export function setOverdraft(asset: Pick<Asset, 'id'>, limit: number): Promise<unknown> {
+    return update({ id: asset.id, overdraft: Math.max(0, Math.round(limit)) });
 }
 
 /** Adds a hand-kept asset, or renames and re-balances one. */

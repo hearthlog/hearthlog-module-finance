@@ -135,3 +135,21 @@ describe('mails Finance could not read', () => {
         expect(summarizeAccount(result[0]!, csob, NOW).stamp).toBe('2 emails to look at');
     });
 });
+
+describe('an arranged overdraft', () => {
+    it('leads with what can be spent and says what the bank shows', () => {
+        const result = summarizeAccount(linked({ amount: -35_000, overdraft: 50_000 }), csob, NOW);
+        expect(result).toMatchObject({ balance: -35_000, overdraft: 50_000, available: 15_000, state: 'current' });
+        expect(result.detail.replace(/ /g, ' ')).toBe('−35 000 Kč at the bank · email 12 min ago');
+    });
+
+    it('is none by default and never negative', () => {
+        expect(summarizeAccount(linked({}), csob, NOW)).toMatchObject({ overdraft: 0, available: 84_310 });
+        expect(summarizeAccount(linked({ overdraft: -5 }), csob, NOW)).toMatchObject({ overdraft: 0, available: 84_310 });
+    });
+
+    it('is named in the overview breakdown', () => {
+        const account = summarizeAccount(linked({ amount: -35_000, overdraft: 50_000 }), csob, NOW);
+        expect(overviewOf([account], [linked({})], NOW).breakdown).toBe('1 by email · overdraft counted');
+    });
+});

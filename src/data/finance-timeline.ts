@@ -121,7 +121,7 @@ function baseCtes(session: ReadModelSession, today: string): RawBuilder<unknown>
             SELECT * FROM typed WHERE kind = 'planned' AND transfer = 0 AND paused = 0
         ),
         asset_total AS (
-            SELECT COALESCE(SUM(amount), 0) AS amount
+            SELECT COALESCE(SUM(amount + COALESCE(overdraft, 0)), 0) AS amount
             FROM ${session.table('assets')} AS assets
             WHERE asset_type = 'asset'
         )`;
