@@ -1,6 +1,7 @@
 import type { Asset, BankConnection, BankMail } from '@hearthlog/sdk/data';
 import type { ReadModelSession } from '@hearthlog/sdk/data';
 import { withTimeout } from '@hearthlog/sdk/data';
+import { sql } from 'kysely';
 
 export type { Asset, BankConnection, BankMail };
 
@@ -23,7 +24,7 @@ export function createAssetRepository(session: ReadModelSession) {
         async getSumOfAssetsByType(category: string): Promise<number> {
             const result = await withTimeout(
                 session.selectFrom('assets')
-                    .select(({ fn }) => fn.sum('amount').as('sum'))
+                    .select(sql<number>`SUM(amount + COALESCE(overdraft, 0))`.as('sum'))
                     .where('asset_type', '=', category)
                     .executeTakeFirst(),
                 DB_TIMEOUT_MS,

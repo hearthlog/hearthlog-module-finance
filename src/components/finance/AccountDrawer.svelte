@@ -6,7 +6,8 @@
     import { Button, CommandConfirmDialog, CommandDrawer, CommandOnly, DataValue } from "@hearthlog/sdk/ui";
     import type { Asset, BankConnection, BankMail } from "../../data/assets.js";
     import { ago, kindLong, QUIET_DAYS, type AccountSummary } from "../../finance/accounts.js";
-    import { acceptBalanceGap, unlinkAsset } from "../../finance/account-commands.js";
+    import { acceptBalanceGap, setOverdraft, unlinkAsset } from "../../finance/account-commands.js";
+    import { parseFloor } from "../../finance/floor.js";
     import { PROVIDER_LABELS } from "../../finance/banks.js";
     import { categoryLabel } from "../../finance/categories.js";
     import BankMark from "./BankMark.svelte";
@@ -46,7 +47,7 @@
     const email = $derived(account?.provider === "email");
     const bankName = $derived(account?.bank?.name ?? "the bank");
     const description = $derived(account ? [kindLong(account.kind), account.tail ? `•••• ${account.tail}` : "", account.provider ? PROVIDER_LABELS[account.provider].long : ""].filter(Boolean).join(" · ") : "");
-    const balanceLabel = $derived(!account ? "" : account.frozen ? "Last balance before the approval ended" : email ? "Balance, from the last email" : "Balance, from the bank");
+    const balanceLabel = $derived(!account ? "" : account.frozen ? "Last balance before the approval ended" : account.overdraft > 0 ? "Available, with the overdraft" : email ? "Balance, from the last email" : "Balance, from the bank");
     const stampNote = $derived(email && account?.state === "current" ? ` · ${bankName} states the balance in each one` : "");
     const toReview = $derived(rows.filter((row) => row.review === "new").length);
     const monthStart = $derived(today ? format(startOfMonth(parseISO(today)), "yyyy-MM-dd") : "");
@@ -126,6 +127,24 @@
         }
     }
 
+    async function commitOverdraft(input: HTMLInputElement): Promise<void> {
+        const current = account?.overdraft ?? 0;
+        const value = input.value.trim() === "" ? 0 : parseFloor(input.value);
+        if (value === null || value < 0 || !asset) {
+            input.value = current ? formatAmount(current) : "";
+            return;
+        }
+        input.value = value ? formatAmount(value) : "";
+        if (value === current) return;
+        try {
+            await setOverdraft(asset, value);
+            notify.success(value ? `Overdraft of ${formatAmount(value)} Kč counted` : "Overdraft removed");
+        } catch (error) {
+            console.error("[AccountDrawer] Overdraft not saved", error);
+            notify.error("The overdraft could not be saved");
+        }
+    }
+
     async function unlink(): Promise<void> {
         confirmUnlink = false;
         if (!asset) return;
@@ -147,7 +166,10 @@
                 <BankMark mark={account.bank?.mark ?? ""} size="lg" />
                 <div class="stack">
                     <span class="over">{balanceLabel}</span>
-                    <span class="figure" class:frozen={account.frozen} class:negative={account.balance < 0}><DataValue>{formatAmount(account.balance)}</DataValue><span class="unit">Kč</span></span>
+                    <span class="figure" class:frozen={account.frozen} class:negative={account.available < 0}><DataValue>{formatAmount(account.available)}</DataValue><span class="unit">Kč</span></span>
+                    {#if account.overdraft > 0}
+                        <span class="split"><DataValue>{formatAmount(account.balance)}</DataValue> Kč {email ? "in the last email" : "at the bank"} · <DataValue>{formatAmount(account.overdraft)}</DataValue> Kč overdraft</span>
+                    {/if}
                     <span class="stamp {account.tone}"><span class="dot"></span>{account.stamp}{stampNote}</span>
                 </div>
             </div>
@@ -239,7 +261,21 @@
                             <div class="kv"><span>Fetch now</span><CommandOnly><Button size="sm" variant="secondary" disabled={fetching} onclick={refresh}>Refresh {bankName}</Button></CommandOnly></div>
                         {/if}
                     {/if}
-                    <div class="kv"><span>Counts in Available now</span><b>{account.frozen ? `Yes, as of ${day(asset?.synced_at, "d MMM")}` : "Yes"}</b></div>
+                    <div class="kv">
+                        <label for="account-overdraft">Arranged overdraft</label>
+                        <CommandOnly>
+                            <span class="overdraft"><input
+                                id="account-overdraft"
+                                inputmode="numeric"
+                                autocomplete="off"
+                                placeholder="None"
+                                value={account.overdraft ? formatAmount(account.overdraft) : ""}
+                                onchange={(event) => commitOverdraft(event.currentTarget)}
+                                onkeydown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+                            /><small>Kč</small></span>
+                        </CommandOnly>
+                    </div>
+                    <div class="kv"><span>Counts in Available now</span><b>{account.frozen ? `Yes, as of ${day(asset?.synced_at, "d MMM")}` : "Yes"}{account.overdraft > 0 ? " · with the overdraft" : ""}</b></div>
                 </div>
             </section>
 
@@ -277,6 +313,11 @@
     .figure .unit { margin-left: 4px; font-size: 0.55em; color: var(--stor-muted-text); }
     .figure.negative { color: var(--stor-negative); }
     .figure.frozen { color: var(--stor-faint-text); }
+    .split { font-size: 12px; line-height: 16px; color: var(--stor-muted-text); font-variant-numeric: tabular-nums; }
+    .overdraft { display: inline-flex; align-items: baseline; gap: 4px; }
+    .overdraft input { width: 9ch; padding: 2px 6px; border: 1px solid var(--stor-border); border-radius: 6px; background: transparent; color: var(--stor-ink); font: inherit; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+    .overdraft input:focus { outline: 2px solid var(--stor-accent-strong); outline-offset: 1px; }
+    .overdraft small { color: var(--stor-muted-text); }
     .stamp { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--stor-muted-text); }
     .stamp .dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--stor-positive); }
     .stamp.stale { color: var(--stor-warning); }
@@ -310,7 +351,7 @@
     .line-amount.muted { color: var(--stor-muted-text); }
     .new-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--stor-action); }
     .new-dot.off { background: transparent; }
-    .kv span { color: var(--stor-muted-text); }
+    .kv span, .kv label { color: var(--stor-muted-text); }
     .kv b { font-weight: 500; color: var(--stor-ink); text-align: right; }
     .kv small { font-weight: 400; color: var(--stor-faint-text); }
     .mail { border-top: 1px solid var(--stor-rule); }

@@ -31,9 +31,9 @@
     <ul class="accounts">
         {#each accounts as account (account.id)}
             <li>
-                <button type="button" class="account" class:frozen={account.frozen} onclick={() => onOpen(account)} aria-label={`${account.name}, ${formatAmount(account.balance)} Kč, ${account.detail}`}>
+                <button type="button" class="account" class:frozen={account.frozen} onclick={() => onOpen(account)} aria-label={`${account.name}, ${formatAmount(account.available)} Kč${account.overdraft > 0 ? " available" : ""}, ${account.detail}`}>
                     <span class="name"><BankMark mark={account.bank?.mark ?? ""} /><span>{account.name}</span></span>
-                    <span class="balance" class:negative={account.balance < 0}><DataValue>{formatAmount(account.balance)}</DataValue><small>Kč</small></span>
+                    <span class="balance" class:negative={account.available < 0}><DataValue>{formatAmount(account.available)}</DataValue><small>Kč</small></span>
                     {#if account.tone === "ok" || account.tone === "hand"}
                         <span class="detail">{account.detail}</span>
                     {:else}
@@ -44,7 +44,7 @@
         {/each}
     </ul>
     <div class="foot">
-        <span class="caption">One sum: every account and asset counts, the card as debt.</span>
+        <span class="caption">One sum: every account and asset counts, the card as debt{accounts.some((account) => account.overdraft > 0) ? ", an overdraft as money you can spend" : ""}.</span>
         <CommandOnly>
             <span class="actions">
                 {#if import.meta.env.DEV}{#await import("../../dev/DevBankPanel.svelte") then dev}<dev.default />{/await}{/if}

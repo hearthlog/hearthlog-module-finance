@@ -25,6 +25,7 @@ export interface AccountAsset {
     sync_issue?: string | null;
     issue_count?: number | null;
     issue_amount?: number | null;
+    overdraft?: number | null;
 }
 
 export interface AccountConnection {
@@ -70,6 +71,10 @@ export interface AccountSummary {
     provider: BankProvider | null;
     kind: string;
     balance: number;
+    /** The arranged overdraft limit, 0 when none. */
+    overdraft: number;
+    /** What can be spent: the balance plus the overdraft. The strip and the drawer lead with it. */
+    available: number;
     state: AccountState;
     tone: AccountTone;
     /** The freshness line with its tone: "Last email 12 min ago", "Renew by 29 Nov". */
@@ -136,10 +141,13 @@ function nativeLine(asset: AccountAsset): string {
 
 export function summarizeAccount(asset: AccountAsset, connection: AccountConnection | null, now: Date): AccountSummary {
     const balance = Number(asset.amount) || 0;
+    const overdraft = Math.max(0, Number(asset.overdraft) || 0);
     const base = {
         id: asset.id,
         name: asset.name,
         balance,
+        overdraft,
+        available: Math.round((balance + overdraft) * 100) / 100,
         kind: asset.account_kind ?? '',
         tail: (asset.account_hash ?? '').replace(/^CARD:.*…/, '').slice(-4),
     };
@@ -153,7 +161,8 @@ export function summarizeAccount(asset: AccountAsset, connection: AccountConnect
     const when = ago(asset.synced_at, now);
     const kind = kindLabel(base.kind);
     const native = nativeLine(asset);
-    const freshLead = native || kind;
+    // With an overdraft the figure shown is what can be spent, so the line says what the bank itself shows.
+    const freshLead = overdraft > 0 ? `${balance < 0 ? "−" : ""}${money(balance)} at the bank` : native || kind;
     const linked = { ...base, bank, linked: true, provider } as const;
 
     if (provider === 'enable_banking') {
@@ -219,6 +228,7 @@ export function overviewOf(accounts: readonly AccountSummary[], assets: readonly
         approval ? `${approval} by bank approval` : '',
         hand ? `${hand} by hand` : '',
         accounts.some((account) => account.kind === 'card' && account.balance < 0) ? 'card debt subtracted' : '',
+        accounts.some((account) => account.overdraft > 0) ? 'overdraft counted' : '',
     ].filter(Boolean);
     const frozen = accounts.filter((account) => account.frozen);
     if (frozen.length) {
