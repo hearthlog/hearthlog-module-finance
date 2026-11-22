@@ -1,0 +1,2551 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finance Redesign — Hearthlog Design Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   Hearthlog --stor-* Design Tokens (Warm Editorial Light & Dark)
+   ========================================================================== */
+:root {
+  --stor-font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --stor-font-serif: "Newsreader Variable", "Newsreader", ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
+
+  --stor-canvas: #f3eee8;
+  --stor-sidebar: #f3eee8;
+  --stor-page: #faf7f3;
+  --stor-surface: #fffdfa;
+  --stor-surface-raised: #ffffff;
+  --stor-surface-muted: #f2ece4;
+  --stor-surface-hover: #f6f1ea;
+  --stor-surface-well: #eae3da;
+
+  --stor-ink: #221b17;
+  --stor-muted: #6e6259;
+  --stor-faint: #96897f;
+
+  --stor-hairline: rgba(45, 31, 21, 0.085);
+  --stor-rule: rgba(45, 31, 21, 0.065);
+  --stor-border-strong: rgba(45, 31, 21, 0.22);
+
+  --stor-action: #c2410c;
+  --stor-action-hover: #a83609;
+  --stor-action-text: #fffdfa;
+  --stor-accent-text: #9a3412;
+  --stor-accent-soft: #fdebdd;
+  --stor-now: #d94e14;
+
+  --stor-positive: #15803d;
+  --stor-positive-soft: #e6f4ea;
+  --stor-warning: #b45309;
+  --stor-warning-soft: #fef3c7;
+  --stor-negative: #be123c;
+  --stor-negative-soft: #ffe4e8;
+
+  --stor-page-shadow: 0 1px 2px rgba(40, 24, 14, 0.04), 0 8px 28px rgba(40, 24, 14, 0.06);
+  --stor-elevation-1: 0 1px 2px rgba(40, 24, 14, 0.045), 0 2px 6px rgba(40, 24, 14, 0.03);
+  --stor-elevation-2: 0 2px 6px rgba(40, 24, 14, 0.07), 0 1px 2px rgba(40, 24, 14, 0.04);
+  --stor-elevation-3: 0 14px 36px rgba(32, 18, 10, 0.14), 0 2px 8px rgba(32, 18, 10, 0.06);
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-section: 16px;
+  --r-panel: 20px;
+  --r-pill: 999px;
+
+  --dur-1: 90ms;
+  --dur-2: 160ms;
+  --dur-3: 240ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html[data-theme="dark"] {
+  --stor-canvas: #120f0d;
+  --stor-sidebar: #120f0d;
+  --stor-page: #181310;
+  --stor-surface: #201a16;
+  --stor-surface-raised: #27201b;
+  --stor-surface-muted: #241d19;
+  --stor-surface-hover: #2a221d;
+  --stor-surface-well: #2e2520;
+
+  --stor-ink: #f4ece6;
+  --stor-muted: #a8998e;
+  --stor-faint: #7b6d63;
+
+  --stor-hairline: rgba(255, 240, 228, 0.09);
+  --stor-rule: rgba(255, 240, 228, 0.06);
+  --stor-border-strong: rgba(255, 240, 228, 0.24);
+
+  --stor-action: #ea7839;
+  --stor-action-hover: #f28a4f;
+  --stor-action-text: #18110c;
+  --stor-accent-text: #f6a471;
+  --stor-accent-soft: #382317;
+  --stor-now: #f08448;
+
+  --stor-positive: #4ade80;
+  --stor-positive-soft: #162c1e;
+  --stor-warning: #fbbf24;
+  --stor-warning-soft: #322411;
+  --stor-negative: #fb7185;
+  --stor-negative-soft: #361720;
+
+  --stor-page-shadow: 0 1px 0 rgba(255, 240, 228, 0.04), 0 12px 32px rgba(0, 0, 0, 0.45);
+  --stor-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --stor-elevation-2: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --stor-elevation-3: 0 18px 42px rgba(0, 0, 0, 0.6);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--stor-font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  background: var(--stor-canvas);
+  color: var(--stor-ink);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color var(--dur-2) ease, color var(--dur-2) ease;
+}
+
+button, input, select {
+  font: inherit;
+  color: inherit;
+}
+
+button { cursor: pointer; }
+
+/* ==========================================================================
+   Study Top Bar (outside the product chrome)
+   ========================================================================== */
+.study-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  background: color-mix(in srgb, var(--stor-canvas) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--stor-hairline);
+}
+
+.study-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.study-brand h1 {
+  margin: 0;
+  font-family: var(--stor-font-serif);
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.study-brand span {
+  font-size: 12px;
+  color: var(--stor-muted);
+}
+
+.study-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.seg {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--stor-surface-well);
+  border: 1px solid var(--stor-hairline);
+}
+
+.seg button {
+  border: 0;
+  background: transparent;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--stor-muted);
+  transition: background-color var(--dur-2) ease, color var(--dur-2) ease, box-shadow var(--dur-2) ease;
+}
+
+.seg button.active {
+  background: var(--stor-surface-raised);
+  color: var(--stor-ink);
+  box-shadow: var(--stor-elevation-1);
+}
+
+.seg button:hover:not(.active) { color: var(--stor-ink); }
+
+.study-stage {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 18px 20px 48px;
+}
+
+/* ==========================================================================
+   Desktop Hearthlog App Shell
+   ========================================================================== */
+.desktop-shell {
+  display: grid;
+  grid-template-columns: 204px minmax(0, 1fr);
+  min-height: 820px;
+  background: var(--stor-sidebar);
+  border-radius: 26px;
+  border: 1px solid var(--stor-hairline);
+  padding: 12px 12px 12px 0;
+  box-shadow: var(--stor-elevation-3);
+  overflow: hidden;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 10px 14px 14px;
+  gap: 4px;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px 14px;
+  font-family: var(--stor-font-serif);
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.logo-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--stor-action);
+  color: var(--stor-action-text);
+  display: grid;
+  place-items: center;
+  font-family: var(--stor-font-sans);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--stor-muted);
+  transition: background-color var(--dur-1), color var(--dur-1);
+}
+
+.nav-item:hover { background: color-mix(in srgb, var(--stor-ink) 4.5%, transparent); color: var(--stor-ink); }
+
+.nav-section-active {
+  background: var(--stor-surface-raised);
+  border-radius: 13px;
+  box-shadow: var(--stor-elevation-1);
+  padding-bottom: 6px;
+  margin-block: 2px;
+}
+
+.nav-section-active .nav-item-main {
+  color: var(--stor-ink);
+  font-weight: 600;
+}
+
+.nav-figure {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--stor-muted);
+}
+
+.nav-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 6px 10px 6px 36px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--stor-muted);
+  text-align: left;
+}
+
+.nav-sub:hover { color: var(--stor-ink); }
+.nav-sub.active { color: var(--stor-ink); font-weight: 600; }
+
+.nav-badge {
+  min-width: 18px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--stor-accent-soft);
+  color: var(--stor-accent-text);
+  font-size: 10.5px;
+  font-weight: 650;
+  display: inline-grid;
+  place-items: center;
+}
+
+.sidebar-foot {
+  margin-top: auto;
+  padding: 10px;
+  font-size: 11.5px;
+  color: var(--stor-faint);
+  border-top: 1px solid var(--stor-rule);
+}
+
+/* Main Raised Page Panel */
+.page-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--stor-page);
+  border-radius: var(--r-panel);
+  box-shadow: var(--stor-page-shadow);
+  border: 1px solid var(--stor-hairline);
+  overflow: hidden;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 26px 14px;
+  border-bottom: 1px solid var(--stor-rule);
+}
+
+.page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.page-title {
+  margin: 0;
+  font-family: var(--stor-font-serif);
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--stor-hairline);
+  background: var(--stor-surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--stor-ink);
+  box-shadow: var(--stor-elevation-1);
+  transition: transform var(--dur-1) ease, background-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
+}
+
+.btn:hover { background: var(--stor-surface-hover); }
+.btn:active { transform: translateY(0.5px); }
+
+.btn-primary {
+  background: var(--stor-action);
+  border-color: transparent;
+  color: var(--stor-action-text);
+}
+
+.btn-primary:hover { background: var(--stor-action-hover); }
+
+.btn-quiet {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--stor-muted);
+}
+
+.btn-quiet:hover {
+  background: var(--stor-surface-muted);
+  color: var(--stor-ink);
+}
+
+.btn-sm {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+/* ==========================================================================
+   Cash Flow Two-Column Cockpit
+   ========================================================================== */
+.cockpit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 316px;
+  gap: 20px;
+  padding: 18px 26px 24px;
+  flex: 1;
+  min-height: 0;
+  align-items: start;
+}
+
+.cockpit-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.cockpit-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Card Primitive */
+.card {
+  background: var(--stor-surface);
+  border: 1px solid var(--stor-hairline);
+  border-radius: var(--r-section);
+  box-shadow: var(--stor-elevation-1);
+}
+
+/* Compact Runway Card (~80px Sparkline + Key Figures) */
+.runway-card {
+  padding: 16px 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.runway-top {
+  display: grid;
+  grid-template-columns: 1.45fr repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.metric-block {
+  min-width: 0;
+  padding-left: 14px;
+  border-left: 1px solid var(--stor-rule);
+}
+
+.metric-block:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.metric-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--stor-muted);
+}
+
+.metric-value {
+  margin-top: 2px;
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.metric-block.lead .metric-value {
+  font-size: 28px;
+  line-height: 32px;
+  letter-spacing: -0.03em;
+}
+
+.metric-value small {
+  margin-left: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--stor-muted);
+}
+
+.metric-sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--stor-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric-sub.warn { color: var(--stor-warning); font-weight: 500; }
+.metric-sub.neg { color: var(--stor-negative); font-weight: 500; }
+.metric-sub.pos { color: var(--stor-positive); font-weight: 500; }
+
+.metric-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  border-radius: 8px;
+}
+
+.metric-btn:hover .metric-label { color: var(--stor-ink); }
+
+.sync-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--stor-muted);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--stor-positive);
+}
+
+.dot.warn { background: var(--stor-warning); }
+.dot.neg { background: var(--stor-negative); }
+.dot.muted { background: var(--stor-faint); }
+
+.floor-edit {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.floor-input {
+  width: 7.5ch;
+  border: 0;
+  border-bottom: 1.5px dashed var(--stor-border-strong);
+  background: transparent;
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  padding: 0;
+  outline: none;
+}
+
+.floor-input:focus { border-bottom-color: var(--stor-action); }
+
+/* Compact ~80px Sparkline */
+.sparkline-wrap {
+  position: relative;
+  height: 82px;
+  padding-top: 6px;
+  border-top: 1px solid var(--stor-rule);
+}
+
+.sparkline-svg {
+  width: 100%;
+  height: 76px;
+  display: block;
+  overflow: visible;
+}
+
+.spark-tooltip {
+  position: absolute;
+  top: 4px;
+  pointer-events: none;
+  background: var(--stor-ink);
+  color: var(--stor-surface);
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 4px 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, -2px);
+  transition: opacity var(--dur-1) ease;
+  box-shadow: var(--stor-elevation-2);
+  z-index: 5;
+}
+
+.spark-tooltip.show { opacity: 1; }
+
+.spark-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--stor-faint);
+  margin-top: -2px;
+}
+
+/* ==========================================================================
+   Timeline Panel
+   ========================================================================== */
+.timeline-panel {
+  overflow: hidden;
+}
+
+.timeline-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--stor-rule);
+}
+
+.month-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.month-nav-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--stor-muted);
+  display: grid;
+  place-items: center;
+}
+
+.month-nav-btn:hover { background: var(--stor-surface-muted); color: var(--stor-ink); }
+
+.month-label {
+  font-family: var(--stor-font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  padding: 0 6px;
+}
+
+.today-jump {
+  margin-left: 4px;
+  border: 1px solid var(--stor-hairline);
+  background: var(--stor-surface-muted);
+  color: var(--stor-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+}
+
+.today-jump:hover { color: var(--stor-ink); }
+
+.filter-pills {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  background: var(--stor-surface-muted);
+  border-radius: 10px;
+}
+
+.filter-pills button {
+  border: 0;
+  background: transparent;
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--stor-muted);
+}
+
+.filter-pills button.active {
+  background: var(--stor-surface-raised);
+  color: var(--stor-ink);
+  box-shadow: var(--stor-elevation-1);
+}
+
+.filter-pills .cnt {
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--stor-faint);
+}
+
+/* Rows */
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.tx-row {
+  display: grid;
+  grid-template-columns: 62px 32px minmax(0, 1fr) auto 96px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid transparent;
+  transition: background-color var(--dur-1) ease;
+  cursor: pointer;
+}
+
+.tx-row.day-start {
+  border-top-color: var(--stor-rule);
+}
+
+.tx-row:first-child { border-top-color: transparent; }
+
+.tx-row:hover { background: var(--stor-surface-hover); }
+
+.tx-row.flash {
+  background: var(--stor-accent-soft);
+}
+
+.tx-row.paused {
+  opacity: 0.72;
+  background: color-mix(in srgb, var(--stor-surface-muted) 55%, transparent);
+}
+
+.tx-date {
+  font-size: 12px;
+  color: var(--stor-faint);
+  white-space: nowrap;
+}
+
+.tx-date strong {
+  color: var(--stor-muted);
+  font-weight: 600;
+}
+
+.cat-tile {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--stor-surface-muted);
+  color: var(--stor-muted);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  flex: none;
+}
+
+.cat-tile.income { background: var(--stor-positive-soft); color: var(--stor-positive); }
+.cat-tile.warn { background: var(--stor-warning-soft); color: var(--stor-warning); }
+
+.tx-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tx-title-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.tx-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--stor-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-row.done .tx-name { font-weight: 450; }
+
+.tx-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--stor-faint);
+}
+
+.bank-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: var(--stor-surface-well);
+  color: var(--stor-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.rec-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--stor-muted);
+  background: var(--stor-surface-muted);
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+
+.new-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--stor-action);
+  flex: none;
+}
+
+.tx-amount {
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tx-amount.pos { color: var(--stor-positive); }
+.tx-amount.neg { color: var(--stor-ink); }
+
+.tx-bal {
+  font-size: 12px;
+  color: var(--stor-faint);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tx-bal.low { color: var(--stor-warning); font-weight: 600; }
+.tx-bal.below {
+  color: var(--stor-negative);
+  font-weight: 650;
+  background: var(--stor-negative-soft);
+  padding: 2px 7px;
+  border-radius: 6px;
+  justify-self: end;
+}
+
+/* Inline match prompt on paused planned row */
+.match-bar {
+  grid-column: 3 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--stor-accent-soft);
+  color: var(--stor-accent-text);
+  font-size: 12px;
+}
+
+.match-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Today Anchor Divider */
+.today-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--stor-accent-soft) 38%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--stor-now) 28%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--stor-now) 18%, transparent);
+}
+
+.today-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--stor-accent-text);
+  letter-spacing: 0.01em;
+}
+
+.today-pill::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--stor-now);
+}
+
+.today-line {
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--stor-now) 24%, transparent);
+}
+
+.today-bal {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--stor-ink);
+}
+
+/* ==========================================================================
+   Right Rail: Attention, Accounts & Pulse
+   ========================================================================== */
+.rail-card {
+  padding: 14px 16px;
+}
+
+.rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rail-title {
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--stor-muted);
+}
+
+.attention-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  background: var(--stor-surface-muted);
+  text-align: left;
+  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+
+.attention-item + .attention-item { margin-top: 7px; }
+
+.attention-item:hover {
+  background: var(--stor-accent-soft);
+  border-color: color-mix(in srgb, var(--stor-action) 20%, transparent);
+}
+
+.attention-item strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--stor-ink);
+}
+
+.attention-item span {
+  display: block;
+  font-size: 11.5px;
+  color: var(--stor-muted);
+}
+
+.count-pill {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: var(--r-pill);
+  background: var(--stor-action);
+  color: var(--stor-action-text);
+  font-size: 11.5px;
+  font-weight: 700;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+
+.count-pill.warn {
+  background: var(--stor-warning-soft);
+  color: var(--stor-warning);
+}
+
+/* Accounts List in Rail */
+.acct-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0 -8px;
+}
+
+.acct-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  transition: background-color var(--dur-1) ease;
+}
+
+.acct-row:hover { background: var(--stor-surface-hover); }
+
+.acct-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--stor-surface-muted);
+  border: 1px solid var(--stor-hairline);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--stor-ink);
+  flex: none;
+}
+
+.acct-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.acct-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--stor-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.acct-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--stor-faint);
+}
+
+.acct-sub.warn { color: var(--stor-warning); font-weight: 500; }
+
+.acct-bal {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.acct-bal.neg { color: var(--stor-negative); }
+
+.rail-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--stor-rule);
+}
+
+/* Monthly Pulse */
+.pulse-bar {
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--stor-surface-well);
+  overflow: hidden;
+  display: flex;
+  margin: 8px 0 10px;
+}
+
+.pulse-in { background: var(--stor-positive); height: 100%; }
+.pulse-out { background: var(--stor-action); height: 100%; }
+
+.pulse-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  font-size: 11.5px;
+}
+
+.pulse-grid span { display: block; color: var(--stor-faint); }
+.pulse-grid strong { font-size: 12.5px; font-weight: 600; }
+
+/* ==========================================================================
+   Tab 2: Budget & Recurring Rules
+   ========================================================================== */
+.budget-view {
+  padding: 18px 26px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.budget-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plan-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-pill {
+  padding: 6px 13px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--stor-hairline);
+  background: var(--stor-surface);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--stor-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.plan-pill.active {
+  background: var(--stor-ink);
+  color: var(--stor-surface);
+  border-color: transparent;
+}
+
+.plan-live-tag {
+  font-size: 10px;
+  font-weight: 650;
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+  background: var(--stor-positive-soft);
+  color: var(--stor-positive);
+}
+
+.plan-pill.active .plan-live-tag {
+  background: rgba(74, 222, 128, 0.2);
+  color: #86efac;
+}
+
+.budget-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 16px 20px;
+  gap: 14px;
+}
+
+.budget-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.budget-table-card {
+  overflow: hidden;
+}
+
+.budget-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: var(--stor-surface-muted);
+  border-bottom: 1px solid var(--stor-rule);
+}
+
+.budget-sec-head h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--stor-muted);
+}
+
+.budget-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1.3fr) 150px 155px 110px 64px;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 18px;
+  border-top: 1px solid var(--stor-rule);
+}
+
+.budget-row:first-of-type { border-top: 0; }
+.budget-row:hover { background: var(--stor-surface-hover); }
+
+.rule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--stor-hairline);
+  background: var(--stor-surface-muted);
+  font-size: 11.5px;
+  font-weight: 550;
+  color: var(--stor-ink);
+  width: fit-content;
+}
+
+.rule-btn.off {
+  background: transparent;
+  color: var(--stor-faint);
+  border-style: dashed;
+}
+
+.rule-btn:hover { border-color: var(--stor-action); }
+
+.actual-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.actual-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--stor-muted);
+}
+
+.actual-track {
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: var(--stor-surface-well);
+  overflow: hidden;
+}
+
+.actual-fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--stor-action);
+}
+
+.actual-fill.done { background: var(--stor-positive); }
+.actual-fill.over { background: var(--stor-negative); }
+
+/* Toggle switch */
+.switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: var(--r-pill);
+  border: 0;
+  background: var(--stor-surface-well);
+  box-shadow: inset 0 0 0 1px var(--stor-hairline);
+  padding: 0;
+  transition: background-color var(--dur-2) ease;
+  justify-self: end;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.switch.on {
+  background: var(--stor-action);
+  box-shadow: none;
+}
+
+.switch.on::after {
+  transform: translateX(16px);
+}
+
+/* ==========================================================================
+   Slide-Over Drawer (Review, Account, Recurring Rule, Transaction)
+   ========================================================================== */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(18, 12, 8, 0.36);
+  backdrop-filter: blur(2px);
+  display: none;
+  justify-content: flex-end;
+}
+
+.drawer-backdrop.open { display: flex; }
+
+.drawer {
+  width: min(440px, 100vw);
+  height: 100%;
+  background: var(--stor-surface);
+  border-left: 1px solid var(--stor-hairline);
+  box-shadow: var(--stor-elevation-3);
+  display: flex;
+  flex-direction: column;
+  animation: slideIn var(--dur-3) var(--ease-out);
+}
+
+@keyframes slideIn {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--stor-rule);
+}
+
+.drawer-head h2 {
+  margin: 0;
+  font-family: var(--stor-font-serif);
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.drawer-body {
+  padding: 18px 22px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.drawer-card {
+  padding: 14px;
+  border-radius: 13px;
+  background: var(--stor-surface-muted);
+  border: 1px solid var(--stor-hairline);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--stor-muted);
+}
+
+.field input, .field select {
+  height: 38px;
+  padding: 0 11px;
+  border-radius: 10px;
+  border: 1px solid var(--stor-hairline);
+  background: var(--stor-surface);
+}
+
+/* ==========================================================================
+   Phone Mockup Frame (390 x 844)
+   ========================================================================== */
+.phone-stage {
+  display: none;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+}
+
+.phone-stage.active { display: flex; }
+.desktop-shell.hidden { display: none; }
+
+.phone-device {
+  width: 390px;
+  height: 820px;
+  border-radius: 44px;
+  background: var(--stor-page);
+  border: 8px solid #1e1815;
+  box-shadow: var(--stor-elevation-3);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+html[data-theme="dark"] .phone-device {
+  border-color: #2f2722;
+}
+
+.phone-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.phone-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px 10px;
+  border-bottom: 1px solid var(--stor-rule);
+}
+
+.phone-top h2 {
+  margin: 0;
+  font-family: var(--stor-font-serif);
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.glance-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--stor-hairline);
+  background: var(--stor-surface);
+  box-shadow: var(--stor-elevation-1);
+  text-align: right;
+}
+
+.glance-pill.warn {
+  background: var(--stor-warning-soft);
+  border-color: color-mix(in srgb, var(--stor-warning) 30%, transparent);
+}
+
+.glance-pill small { display: block; font-size: 10px; color: var(--stor-muted); line-height: 1.2; }
+.glance-pill strong { display: block; font-size: 13px; font-weight: 650; line-height: 1.2; }
+
+.phone-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.phone-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--stor-rule);
+}
+
+.phone-row:first-child { border-top: 0; }
+
+.phone-fab {
+  position: absolute;
+  right: 14px;
+  bottom: 84px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: var(--r-pill);
+  border: 0;
+  background: var(--stor-action);
+  color: var(--stor-action-text);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--stor-elevation-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.phone-dock {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
+  height: 58px;
+  border-radius: 24px;
+  background: var(--stor-surface-raised);
+  border: 1px solid var(--stor-hairline);
+  box-shadow: var(--stor-elevation-3);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 4px;
+}
+
+.phone-dock button {
+  border: 0;
+  background: transparent;
+  border-radius: 18px;
+  font-size: 11px;
+  font-weight: 550;
+  color: var(--stor-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.phone-dock button.active {
+  background: var(--stor-surface-muted);
+  color: var(--stor-ink);
+  font-weight: 650;
+}
+
+/* Phone Outlook Sheet overlay inside device */
+.phone-sheet {
+  position: absolute;
+  inset: 0;
+  background: rgba(18, 12, 8, 0.42);
+  display: none;
+  align-items: flex-end;
+  z-index: 20;
+}
+
+.phone-sheet.open { display: flex; }
+
+.phone-sheet-panel {
+  width: 100%;
+  max-height: 82%;
+  background: var(--stor-surface);
+  border-radius: 24px 24px 0 0;
+  padding: 12px 16px 24px;
+  overflow-y: auto;
+  box-shadow: var(--stor-elevation-3);
+}
+
+.sheet-handle {
+  width: 38px;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--stor-border-strong);
+  margin: 0 auto 12px;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%) translateY(16px);
+  opacity: 0;
+  pointer-events: none;
+  background: var(--stor-ink);
+  color: var(--stor-surface);
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--stor-elevation-3);
+  transition: opacity var(--dur-2) ease, transform var(--dur-2) var(--ease-out);
+  z-index: 100;
+}
+
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Utility */
+.hidden { display: none !important; }
+
+@media (max-width: 1080px) {
+  .desktop-shell { grid-template-columns: 1fr; padding: 10px; }
+  .sidebar { display: none; }
+  .cockpit { grid-template-columns: 1fr; }
+  .runway-top { grid-template-columns: repeat(2, 1fr); }
+  .budget-summary { grid-template-columns: repeat(2, 1fr); }
+  .budget-row { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .budget-row .hide-sm { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========================================================================
+     Design Study Controls
+     ======================================================================== -->
+<header class="study-bar">
+  <div class="study-brand">
+    <h1>Finance Redesign</h1>
+    <span>Hearthlog · Cash-Flow Cockpit, Visible Accounts &amp; Recurring Budgets</span>
+  </div>
+  <div class="study-controls">
+    <div class="seg" role="group" aria-label="Viewport">
+      <button type="button" class="active" data-viewport="desktop">Desktop</button>
+      <button type="button" data-viewport="phone">Phone</button>
+    </div>
+    <div class="seg" role="group" aria-label="Scenario">
+      <button type="button" class="active" data-scenario="healthy">Healthy runway</button>
+      <button type="button" data-scenario="dip">Floor dip ahead</button>
+    </div>
+    <div class="seg" role="group" aria-label="Theme">
+      <button type="button" class="active" data-theme-btn="light">Light</button>
+      <button type="button" data-theme-btn="dark">Dark</button>
+    </div>
+  </div>
+</header>
+
+<main class="study-stage">
+
+  <!-- ======================================================================
+       DESKTOP SHELL
+       ====================================================================== -->
+  <div class="desktop-shell" id="desktopShell">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-mark">H</span>
+        <span>Hearthlog</span>
+      </div>
+      <button type="button" class="nav-item"><span>☀️</span> Today</button>
+      <button type="button" class="nav-item"><span>📅</span> Calendar</button>
+
+      <div class="nav-section-active">
+        <button type="button" class="nav-item nav-item-main" data-tab-jump="cashflow">
+          <span>💳</span> Finance
+          <span class="nav-figure" id="sidebarFigure">142 840 Kč</span>
+        </button>
+        <button type="button" class="nav-sub active" data-tab-jump="cashflow">
+          <span>Cash Flow</span>
+          <span class="nav-badge" id="sidebarReviewBadge">3</span>
+        </button>
+        <button type="button" class="nav-sub" data-tab-jump="budget">
+          <span>Budget &amp; Recurring</span>
+        </button>
+      </div>
+
+      <button type="button" class="nav-item"><span>🧾</span> Invoices</button>
+      <button type="button" class="nav-item"><span>🫀</span> Health</button>
+      <button type="button" class="nav-item"><span>🧮</span> Calculators</button>
+
+      <div class="sidebar-foot">
+        Local-first · Synced 4m ago
+      </div>
+    </aside>
+
+    <section class="page-panel">
+      <header class="page-header">
+        <div class="page-header-left">
+          <h2 class="page-title">Finance</h2>
+          <div class="seg" role="tablist" aria-label="Finance views">
+            <button type="button" role="tab" class="active" data-tab="cashflow">Cash Flow</button>
+            <button type="button" role="tab" data-tab="budget">Budget &amp; Recurring</button>
+          </div>
+        </div>
+        <div>
+          <button type="button" class="btn btn-primary" id="primaryActionBtn">+ Add transaction</button>
+        </div>
+      </header>
+
+      <!-- ==================================================================
+           TAB 1: CASH FLOW COCKPIT
+           ================================================================== -->
+      <div class="cockpit" id="tabCashflow">
+        <div class="cockpit-main">
+
+          <!-- Compact Runway Hero (~80px Sparkline + 4 Key Figures) -->
+          <section class="card runway-card" aria-label="Cash-flow runway">
+            <div class="runway-top">
+              <div class="metric-block lead">
+                <div class="metric-label">
+                  Available now
+                  <span class="sync-dot"><span class="dot"></span> 4m ago</span>
+                </div>
+                <div class="metric-value" id="metricAvailable">142 840<small>Kč</small></div>
+                <div class="metric-sub">4 linked · 1 manual · card as debt</div>
+              </div>
+
+              <div class="metric-block">
+                <button type="button" class="metric-btn" id="jumpLowBtn" title="Jump to lowest balance day in timeline">
+                  <div class="metric-label">Lowest ahead ↗</div>
+                  <div class="metric-value" id="metricLow">68 240<small>Kč</small></div>
+                  <div class="metric-sub pos" id="metricLowSub">28 Nov · 38 240 over floor</div>
+                </button>
+              </div>
+
+              <div class="metric-block">
+                <div class="metric-label">After last plan</div>
+                <div class="metric-value" id="metricEnd">161 900<small>Kč</small></div>
+                <div class="metric-sub" id="metricEndSub">15 Dec · +19 060 Kč</div>
+              </div>
+
+              <div class="metric-block">
+                <label class="metric-label" for="floorInput">Safety floor</label>
+                <div class="floor-edit">
+                  <input id="floorInput" class="floor-input" value="30 000" aria-label="Safety floor in CZK">
+                  <small style="color:var(--stor-muted);font-size:12px;font-weight:500;">Kč</small>
+                </div>
+                <div class="metric-sub">Edit to test threshold</div>
+              </div>
+            </div>
+
+            <!-- Compact ~80px Interactive Sparkline -->
+            <div class="sparkline-wrap" id="sparklineWrap">
+              <div class="spark-tooltip" id="sparkTooltip"></div>
+              <svg class="sparkline-svg" id="sparkSvg" viewBox="0 0 720 76" preserveAspectRatio="none"></svg>
+              <div class="spark-legend">
+                <span>1 Nov</span>
+                <span>● Today · 22 Nov</span>
+                <span id="sparkLowLegend">Low: 28 Nov</span>
+                <span>15 Dec</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Timeline Panel -->
+          <section class="card timeline-panel" aria-label="Transactions timeline">
+            <div class="timeline-toolbar">
+              <div class="month-nav">
+                <button type="button" class="month-nav-btn" aria-label="Previous month" onclick="showToast('Scrolled to October 2026')">‹</button>
+                <span class="month-label">November 2026</span>
+                <button type="button" class="month-nav-btn" aria-label="Next month" onclick="showToast('Scrolled to December 2026')">›</button>
+                <button type="button" class="today-jump" id="scrollTodayBtn">Today</button>
+              </div>
+
+              <div class="filter-pills" role="group" aria-label="Filter transactions">
+                <button type="button" class="active" data-filter="all">All</button>
+                <button type="button" data-filter="planned">Planned <span class="cnt" id="cntPlanned">6</span></button>
+                <button type="button" data-filter="done">Done <span class="cnt" id="cntDone">6</span></button>
+              </div>
+            </div>
+
+            <div class="timeline-list" id="timelineList"></div>
+          </section>
+        </div>
+
+        <!-- Persistent Right Rail -->
+        <aside class="cockpit-rail">
+          <!-- Needs Attention -->
+          <section class="card rail-card" id="attentionCard">
+            <div class="rail-head">
+              <span class="rail-title">Needs attention</span>
+            </div>
+            <button type="button" class="attention-item" id="openReviewBtn">
+              <div>
+                <strong>Review bank activity</strong>
+                <span>1 matched plan · 1 transfer · 1 new</span>
+              </div>
+              <span class="count-pill" id="reviewCountPill">3</span>
+            </button>
+            <button type="button" class="attention-item" onclick="showToast('Opened Quick Sort for 2 uncategorized rows')">
+              <div>
+                <strong>Sort uncategorized</strong>
+                <span>Give November rows a category</span>
+              </div>
+              <span class="count-pill warn">2</span>
+            </button>
+          </section>
+
+          <!-- Always-Visible Accounts & Sync Health -->
+          <section class="card rail-card">
+            <div class="rail-head">
+              <span class="rail-title">Accounts</span>
+              <span class="sync-dot"><span class="dot"></span> 4 linked</span>
+            </div>
+            <div class="acct-list" id="accountsList"></div>
+            <div class="rail-foot">
+              <button type="button" class="btn btn-sm" style="flex:1" onclick="showToast('Link a bank account (ČSOB, Air Bank, ČS, Revolut)')">+ Link bank</button>
+              <button type="button" class="btn btn-sm btn-quiet" onclick="showToast('Add manual asset')">+ Asset</button>
+            </div>
+          </section>
+
+          <!-- November Cash Flow Pulse -->
+          <section class="card rail-card">
+            <div class="rail-head">
+              <span class="rail-title">November flow</span>
+              <span style="font-size:11.5px;color:var(--stor-positive);font-weight:600;">+35 260 Kč</span>
+            </div>
+            <div class="pulse-bar">
+              <div class="pulse-in" style="width:61%"></div>
+              <div class="pulse-out" style="width:39%"></div>
+            </div>
+            <div class="pulse-grid">
+              <div><span>Income</span><strong style="color:var(--stor-positive)">+96 500</strong></div>
+              <div><span>Spent</span><strong>−61 240</strong></div>
+              <div><span>Savings</span><strong>36.5%</strong></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <!-- ==================================================================
+           TAB 2: BUDGET & RECURRING RULES
+           ================================================================== -->
+      <div class="budget-view hidden" id="tabBudget">
+        <div class="budget-top">
+          <div class="plan-switcher" role="group" aria-label="Budget scenarios">
+            <button type="button" class="plan-pill active" data-plan="baseline">
+              Baseline 2026 <span class="plan-live-tag">Active on timeline</span>
+            </button>
+            <button type="button" class="plan-pill" data-plan="house">
+              House Downpayment
+            </button>
+            <button type="button" class="plan-pill" data-plan="lean">
+              Lean Month
+            </button>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn btn-sm" onclick="showToast('Duplicated current scenario')">Duplicate</button>
+            <button type="button" class="btn btn-sm" onclick="showToast('Created new scenario')">+ New scenario</button>
+          </div>
+        </div>
+
+        <section class="card budget-summary">
+          <div class="metric-block">
+            <div class="metric-label">Planned income</div>
+            <div class="metric-value" style="color:var(--stor-positive)" id="budIncome">96 500<small>Kč</small></div>
+            <div class="metric-sub">2 recurring sources</div>
+          </div>
+          <div class="metric-block">
+            <div class="metric-label">Planned expenses</div>
+            <div class="metric-value" id="budExpense">64 800<small>Kč</small></div>
+            <div class="metric-sub">51 200 Kč spent this month</div>
+          </div>
+          <div class="metric-block">
+            <div class="metric-label">Monthly surplus</div>
+            <div class="metric-value" style="color:var(--stor-positive)" id="budSurplus">+31 700<small>Kč</small></div>
+            <div class="metric-sub pos">32.8% savings rate</div>
+          </div>
+          <div class="metric-block">
+            <div class="metric-label">Auto-scheduled</div>
+            <div class="metric-value" id="budAutoCount">7 / 9</div>
+            <div class="metric-sub">Active recurring rules → Timeline</div>
+          </div>
+        </section>
+
+        <div class="budget-grid">
+          <section class="card budget-table-card">
+            <div class="budget-sec-head">
+              <h3>Income</h3>
+              <span style="font-size:12px;color:var(--stor-positive);font-weight:600;">+96 500 Kč / mo</span>
+            </div>
+            <div id="budgetIncomeRows"></div>
+          </section>
+
+          <section class="card budget-table-card">
+            <div class="budget-sec-head">
+              <h3>Expenses &amp; Recurring Rules</h3>
+              <span style="font-size:12px;color:var(--stor-muted);font-weight:600;">64 800 Kč / mo</span>
+            </div>
+            <div id="budgetExpenseRows"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ======================================================================
+       PHONE MOCKUP (390 × 820)
+       ====================================================================== -->
+  <div class="phone-stage" id="phoneStage">
+    <div class="phone-device">
+      <div class="phone-status">
+        <span>9:41</span>
+        <span>5G · 92%</span>
+      </div>
+      <div class="phone-top">
+        <h2>Finance</h2>
+        <button type="button" class="glance-pill" id="phoneGlanceBtn" title="Open Outlook & Accounts">
+          <div>
+            <small id="phoneGlanceLabel">Available now</small>
+            <strong id="phoneGlanceVal">142 840 Kč</strong>
+          </div>
+          <span style="color:var(--stor-faint);font-size:12px;">▾</span>
+        </button>
+      </div>
+
+      <div class="phone-scroll">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 4px;">
+          <span class="month-label" style="font-size:17px;padding:0;">November 2026</span>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn btn-sm" style="height:28px;background:var(--stor-accent-soft);color:var(--stor-accent-text);border:0;" onclick="openReviewDrawer()">3 to review</button>
+          </div>
+        </div>
+
+        <!-- Compact mobile sparkline card -->
+        <div class="card" style="padding:10px 12px 8px;" onclick="togglePhoneSheet(true)">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--stor-muted);margin-bottom:4px;">
+            <span>Runway to 15 Dec</span>
+            <span id="phoneSparkMeta" style="font-weight:600;color:var(--stor-positive);">Safe · Low 68 240 Kč</span>
+          </div>
+          <svg id="phoneSparkSvg" viewBox="0 0 340 52" style="width:100%;height:52px;display:block;overflow:visible;"></svg>
+        </div>
+
+        <!-- Mobile Timeline Card -->
+        <div class="card" style="overflow:hidden;" id="phoneTimelineList"></div>
+      </div>
+
+      <button type="button" class="phone-fab" onclick="showToast('Add transaction')">+ Add</button>
+
+      <nav class="phone-dock" aria-label="Mobile navigation">
+        <button type="button"><span>☀️</span>Today</button>
+        <button type="button" class="active"><span>💳</span>Cash Flow</button>
+        <button type="button" onclick="showToast('Switch to Budget & Recurring')"><span>↻</span>Budget</button>
+        <button type="button" onclick="togglePhoneSheet(true)"><span>🏦</span>Accounts</button>
+      </nav>
+
+      <!-- Phone Outlook & Accounts Bottom Sheet -->
+      <div class="phone-sheet" id="phoneSheet" onclick="if(event.target===this) togglePhoneSheet(false)">
+        <div class="phone-sheet-panel">
+          <div class="sheet-handle"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 style="margin:0;font-family:var(--stor-font-serif);font-size:21px;font-weight:500;">Outlook &amp; Accounts</h3>
+            <button type="button" class="btn btn-sm btn-quiet" onclick="togglePhoneSheet(false)">Done</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+            <div class="drawer-card">
+              <div class="metric-label">Available now</div>
+              <div style="font-size:19px;font-weight:650;margin-top:2px;" id="sheetAvail">142 840 Kč</div>
+            </div>
+            <div class="drawer-card">
+              <div class="metric-label">Lowest ahead</div>
+              <div style="font-size:19px;font-weight:650;margin-top:2px;" id="sheetLow">68 240 Kč</div>
+            </div>
+          </div>
+          <div class="rail-title" style="margin-bottom:6px;">Accounts</div>
+          <div id="phoneAccountsList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ========================================================================
+     Slide-Over Drawer (Review / Account / Recurring Rule)
+     ======================================================================== -->
+<div class="drawer-backdrop" id="drawerBackdrop" onclick="if(event.target===this) closeDrawer()">
+  <div class="drawer" role="dialog" aria-modal="true">
+    <div class="drawer-head">
+      <h2 id="drawerTitle">Details</h2>
+      <button type="button" class="btn btn-sm btn-quiet" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==========================================================================
+   Mock Data (Czech Banks, CZK, Recurring Rules & Runway)
+   ========================================================================== */
+const state = {
+  scenario: 'healthy', // 'healthy' | 'dip'
+  tab: 'cashflow',     // 'cashflow' | 'budget'
+  filter: 'all',       // 'all' | 'planned' | 'done'
+  floor: 30000,
+  reviewPending: 3,
+  planMatchedResolved: false,
+  accounts: [
+    { id: 'csob', name: 'ČSOB Běžný', mark: 'ČS', provider: 'Email notifications · 4m ago', balance: 84210, status: 'ok' },
+    { id: 'airbank', name: 'Air Bank Spořicí', mark: 'AB', provider: 'Email notifications · 2h ago', balance: 52000, status: 'ok' },
+    { id: 'revolut', name: 'Revolut', mark: 'RE', provider: 'Bank approval · expires in 5d', balance: 14880, status: 'warn' },
+    { id: 'csas', name: 'ČS Kreditní karta', mark: 'SP', provider: 'Statement · counts as debt', balance: -11450, status: 'ok' },
+    { id: 'cash', name: 'Hotovost', mark: 'Kč', provider: 'Hand-kept asset', balance: 3200, status: 'hand' }
+  ],
+  rows: [
+    { id: 't1', date: '2026-11-18', day: '18 Nov', name: 'Rohlik.cz', cat: 'Food', icon: '🛒', amount: -2840, kind: 'done', bank: 'ČS' },
+    { id: 't2', date: '2026-11-19', day: '19 Nov', name: 'Spotify Family', cat: 'Subscriptions', icon: '🎵', amount: -269, kind: 'done', bank: 'RE', recurring: 'Monthly · 19th' },
+    { id: 't3', date: '2026-11-20', day: '20 Nov', name: 'Shell Čerpací stanice', cat: 'Transport', icon: '⛽', amount: -1650, kind: 'done', bank: 'SP', isNew: true },
+    { id: 't4', date: '2026-11-21', day: '21 Nov', name: 'Kavárna Místo', cat: 'Uncategorized', icon: '☕', amount: -340, kind: 'done', bank: 'RE', warn: true },
+    { id: 't5', date: '2026-11-22', day: '22 Nov', name: 'Nájem bytu (ČSOB transfer)', cat: 'Housing', icon: '🏠', amount: -24500, kind: 'done', bank: 'ČS', isNew: true },
+    // --- TODAY DIVIDER ---
+    { id: 'p1', date: '2026-11-22', day: '22 Nov', name: 'Nájem bytu', cat: 'Housing', icon: '🏠', amount: -24500, kind: 'planned', recurring: 'Monthly · 22nd', paused: true },
+    { id: 'p2', date: '2026-11-25', day: '25 Nov', name: 'PRE Elektřina záloha', cat: 'Housing', icon: '⚡', amount: -3400, kind: 'planned', recurring: 'Monthly · 25th' },
+    { id: 'p3', date: '2026-11-26', day: '26 Nov', name: 'Záloha sociální & zdravotní', cat: 'Other', icon: '🏛️', amount: -14800, kind: 'planned', recurring: 'Monthly · 26th' },
+    { id: 'p4', date: '2026-11-28', day: '28 Nov', name: 'Splátka kreditní karty', cat: 'Housing', icon: '💳', amount: -11450, kind: 'planned', recurring: 'Monthly · 28th', dipExtra: -45000, dipName: 'Annual Car Insurance + Winter Tires' },
+    { id: 'p5', date: '2026-12-01', day: '1 Dec', name: 'Faktura — Klient Studio', cat: 'Income', icon: '💼', amount: 82000, kind: 'planned', recurring: 'Monthly · 1st' },
+    { id: 'p6', date: '2026-12-05', day: '5 Dec', name: 'Školka & kroužky', cat: 'Kids', icon: '🎨', amount: -6900, kind: 'planned', recurring: 'Monthly · 5th' }
+  ],
+  budgetIncome: [
+    { id: 'bi1', name: 'Consulting retainer', cat: 'Income', icon: '💼', amount: 82000, actual: 82000, rule: 'Monthly · 1st', auto: true },
+    { id: 'bi2', name: 'Advisory / side projects', cat: 'Income', icon: '✨', amount: 14500, actual: 14500, rule: 'Monthly · 15th', auto: true }
+  ],
+  budgetExpense: [
+    { id: 'be1', name: 'Nájem bytu', cat: 'Housing', icon: '🏠', amount: 24500, actual: 24500, rule: 'Monthly · 22nd', auto: true },
+    { id: 'be2', name: 'Groceries & dining', cat: 'Food', icon: '🛒', amount: 14000, actual: 11840, rule: 'Monthly budget only', auto: false },
+    { id: 'be3', name: 'Záloha sociální & zdravotní', cat: 'Other', icon: '🏛️', amount: 14800, actual: 0, rule: 'Monthly · 26th', auto: true },
+    { id: 'be4', name: 'Školka & kroužky', cat: 'Kids', icon: '🎨', amount: 6900, actual: 6900, rule: 'Monthly · 5th', auto: true },
+    { id: 'be5', name: 'PRE Elektřina', cat: 'Housing', icon: '⚡', amount: 3400, actual: 0, rule: 'Monthly · 25th', auto: true },
+    { id: 'be6', name: 'Transport & fuel', cat: 'Transport', icon: '⛽', amount: 3800, actual: 4120, rule: 'Monthly budget only', auto: false },
+    { id: 'be7', name: 'Subscriptions (Spotify, iCloud)', cat: 'Subscriptions', icon: '🎵', amount: 1200, actual: 1180, rule: 'Monthly · 19th', auto: true }
+  ]
+};
+
+function fmt(n, signed = false) {
+  const abs = Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  if (n < 0) return `−${abs}`;
+  if (signed && n > 0) return `+${abs}`;
+  return abs;
+}
+
+function getAvailable() {
+  const base = state.accounts.reduce((s, a) => s + a.balance, 0);
+  return state.scenario === 'dip' ? base - 64000 : base;
+}
+
+function computeProjection() {
+  const available = getAvailable();
+  let running = available;
+  const points = [
+    { label: '1 Nov', bal: available + 26000, past: true },
+    { label: '8 Nov', bal: available + 19500, past: true },
+    { label: '15 Nov', bal: available + 11200, past: true },
+    { label: 'Today · 22 Nov', bal: available, today: true, id: 'today' }
+  ];
+
+  const enriched = state.rows.map(r => {
+    const isDipRow = state.scenario === 'dip' && r.dipExtra;
+    const amount = isDipRow ? r.amount + r.dipExtra : r.amount;
+    const name = isDipRow ? r.dipName : r.name;
+    let balanceAfter = null;
+    if (r.kind === 'planned') {
+      if (!(r.paused && !state.planMatchedResolved)) {
+        running += amount;
+        balanceAfter = running;
+        points.push({ label: `${r.day} · ${name}`, shortDay: r.day, bal: running, id: r.id });
+      }
+    }
+    return { ...r, displayAmount: amount, displayName: name, balanceAfter };
+  });
+
+  // Find lowest point from today onward
+  const future = points.filter(p => !p.past);
+  let low = future[0];
+  for (const p of future) if (p.bal < low.bal) low = p;
+  const end = future[future.length - 1];
+
+  return { available, enriched, points, low, end };
+}
+
+/* ==========================================================================
+   Sparkline Renderer (~80px compact stepped/smooth runway)
+   ========================================================================== */
+function renderSparkline(svgEl, points, floor, low, height, width, interactive = false) {
+  const vals = [...points.map(p => p.bal), floor];
+  const minV = Math.min(...vals) - 12000;
+  const maxV = Math.max(...vals) + 12000;
+  const padX = 8;
+  const padY = 8;
+  const innerW = width - padX * 2;
+  const innerH = height - padY * 2;
+
+  const xOf = (i) => padX + (i / (points.length - 1)) * innerW;
+  const yOf = (v) => padY + (1 - (v - minV) / (maxV - minV || 1)) * innerH;
+
+  const floorY = yOf(floor);
+  const todayIdx = points.findIndex(p => p.today);
+
+  // Build past path and future path
+  const pastPts = points.slice(0, todayIdx + 1).map((p, i) => `${xOf(i).toFixed(1)},${yOf(p.bal).toFixed(1)}`);
+  const futPts = points.slice(todayIdx).map((p, i) => `${xOf(todayIdx + i).toFixed(1)},${yOf(p.bal).toFixed(1)}`);
+
+  const futArea = `M ${xOf(todayIdx).toFixed(1)},${yOf(points[todayIdx].bal).toFixed(1)} ` +
+    points.slice(todayIdx + 1).map((p, i) => `L ${xOf(todayIdx + 1 + i).toFixed(1)},${yOf(p.bal).toFixed(1)}`).join(' ') +
+    ` L ${xOf(points.length - 1).toFixed(1)},${height} L ${xOf(todayIdx).toFixed(1)},${height} Z`;
+
+  const lowIdx = points.indexOf(low);
+  const isBelow = low.bal < floor;
+  const strokeColor = isBelow ? 'var(--stor-negative)' : 'var(--stor-action)';
+  const fillId = `grad-${svgEl.id}`;
+
+  svgEl.innerHTML = `
+    <defs>
+      <linearGradient id="${fillId}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="${strokeColor}" stop-opacity="0.0"/>
+      </linearGradient>
+    </defs>
+    ${isBelow ? `<rect x="${xOf(todayIdx)}" y="${floorY}" width="${width - xOf(todayIdx) - padX}" height="${Math.max(0, height - floorY)}" fill="var(--stor-negative)" opacity="0.07" rx="4"/>` : ''}
+    <line x1="${padX}" y1="${floorY.toFixed(1)}" x2="${width - padX}" y2="${floorY.toFixed(1)}" stroke="var(--stor-border-strong)" stroke-dasharray="4 4" stroke-width="1"/>
+    <text x="${width - padX}" y="${Math.max(10, floorY - 4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--stor-faint)">Floor ${fmt(floor)}</text>
+    <path d="${futArea}" fill="url(#${fillId})"/>
+    <polyline points="${pastPts.join(' ')}" fill="none" stroke="var(--stor-faint)" stroke-width="1.75" stroke-dasharray="2 3" opacity="0.7"/>
+    <polyline points="${futPts.join(' ')}" fill="none" stroke="${strokeColor}" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${xOf(todayIdx).toFixed(1)}" cy="${yOf(points[todayIdx].bal).toFixed(1)}" r="4" fill="var(--stor-now)" stroke="var(--stor-surface)" stroke-width="2"/>
+    <circle cx="${xOf(lowIdx).toFixed(1)}" cy="${yOf(low.bal).toFixed(1)}" r="4" fill="${isBelow ? 'var(--stor-negative)' : 'var(--stor-positive)'}" stroke="var(--stor-surface)" stroke-width="2"/>
+    ${interactive ? points.map((p, i) => `
+      <circle class="spark-hit" data-idx="${i}" cx="${xOf(i).toFixed(1)}" cy="${yOf(p.bal).toFixed(1)}" r="12" fill="transparent" style="cursor:pointer;"/>
+    `).join('') : ''}
+  `;
+
+  if (interactive) {
+    const tooltip = document.getElementById('sparkTooltip');
+    svgEl.querySelectorAll('.spark-hit').forEach(hit => {
+      const idx = Number(hit.dataset.idx);
+      const p = points[idx];
+      hit.addEventListener('mouseenter', () => {
+        const pct = (xOf(idx) / width) * 100;
+        tooltip.textContent = `${p.label} · ${fmt(p.bal)} Kč`;
+        tooltip.style.left = `${Math.min(86, Math.max(14, pct))}%`;
+        tooltip.classList.add('show');
+      });
+      hit.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+      hit.addEventListener('click', () => {
+        if (p.id && p.id !== 'today') flashRow(p.id);
+      });
+    });
+  }
+}
+
+/* ==========================================================================
+   Main Render
+   ========================================================================== */
+function render() {
+  const { available, enriched, points, low, end } = computeProjection();
+  const below = low.bal < state.floor;
+  const margin = Math.abs(low.bal - state.floor);
+
+  // Metrics
+  document.getElementById('sidebarFigure').textContent = `${fmt(available)} Kč`;
+  document.getElementById('metricAvailable').innerHTML = `${fmt(available)}<small>Kč</small>`;
+  document.getElementById('metricLow').innerHTML = `${fmt(low.bal)}<small>Kč</small>`;
+  document.getElementById('metricLow').style.color = below ? 'var(--stor-negative)' : 'var(--stor-ink)';
+
+  const lowSub = document.getElementById('metricLowSub');
+  lowSub.textContent = `${low.shortDay || 'Today'} · ${fmt(margin)} ${below ? 'under' : 'over'} floor`;
+  lowSub.className = `metric-sub ${below ? 'neg' : 'pos'}`;
+
+  document.getElementById('metricEnd').innerHTML = `${fmt(end.bal)}<small>Kč</small>`;
+  document.getElementById('metricEndSub').textContent = `5 Dec · ${fmt(end.bal - available, true)} Kč`;
+  document.getElementById('sparkLowLegend').textContent = `Low: ${low.shortDay || 'Today'} (${fmt(low.bal)} Kč)`;
+
+  // Phone glance
+  const pgBtn = document.getElementById('phoneGlanceBtn');
+  pgBtn.classList.toggle('warn', below);
+  document.getElementById('phoneGlanceLabel').textContent = below ? `Lowest · ${low.shortDay}` : 'Available now';
+  document.getElementById('phoneGlanceVal').textContent = `${fmt(below ? low.bal : available)} Kč`;
+  document.getElementById('sheetAvail').textContent = `${fmt(available)} Kč`;
+  document.getElementById('sheetLow').textContent = `${fmt(low.bal)} Kč`;
+  const pSparkMeta = document.getElementById('phoneSparkMeta');
+  pSparkMeta.textContent = below ? `Dips ${fmt(margin)} under floor` : `Safe · Low ${fmt(low.bal)} Kč`;
+  pSparkMeta.style.color = below ? 'var(--stor-negative)' : 'var(--stor-positive)';
+
+  // Sparklines
+  renderSparkline(document.getElementById('sparkSvg'), points, state.floor, low, 76, 720, true);
+  renderSparkline(document.getElementById('phoneSparkSvg'), points, state.floor, low, 52, 340, false);
+
+  // Attention badge
+  document.getElementById('reviewCountPill').textContent = state.reviewPending;
+  document.getElementById('sidebarReviewBadge').textContent = state.reviewPending;
+  document.getElementById('sidebarReviewBadge').classList.toggle('hidden', state.reviewPending === 0);
+  document.getElementById('openReviewBtn').classList.toggle('hidden', state.reviewPending === 0);
+
+  // Timeline (Desktop + Phone)
+  const visible = enriched.filter(r => state.filter === 'all' || r.kind === state.filter);
+  const doneRows = visible.filter(r => r.kind === 'done');
+  const plannedRows = visible.filter(r => r.kind === 'planned');
+
+  const renderDesktopRow = (r, prevDate) => {
+    const dayStart = r.date !== prevDate;
+    const balTone = r.balanceAfter !== null && r.balanceAfter < state.floor ? 'below' : (r.balanceAfter === low.bal ? 'low' : '');
+    const paused = r.paused && !state.planMatchedResolved;
+    return `
+      <div class="tx-row ${r.kind} ${dayStart ? 'day-start' : ''} ${paused ? 'paused' : ''}" data-row-id="${r.id}" onclick="openTxDrawer('${r.id}')">
+        <div class="tx-date">${dayStart ? `<strong>${r.day}</strong>` : ''}</div>
+        <div class="cat-tile ${r.displayAmount > 0 ? 'income' : ''} ${r.warn ? 'warn' : ''}">${r.icon}</div>
+        <div class="tx-main">
+          <div class="tx-title-line">
+            ${r.isNew ? '<span class="new-dot" title="New from bank"></span>' : ''}
+            <span class="tx-name">${r.displayName}</span>
+            ${r.bank ? `<span class="bank-chip">${r.bank}</span>` : ''}
+            ${r.recurring ? `<span class="rec-chip">↻ ${r.recurring}</span>` : ''}
+          </div>
+          <div class="tx-meta">
+            <span>${r.cat}</span>
+            ${paused ? '<span>· Paused (matched bank payment)</span>' : ''}
+          </div>
+        </div>
+        <div class="tx-amount ${r.displayAmount >= 0 ? 'pos' : 'neg'}">${fmt(r.displayAmount, true)} Kč</div>
+        <div class="tx-bal ${balTone}">${r.balanceAfter !== null ? `${fmt(r.balanceAfter)} Kč` : ''}</div>
+        ${paused ? `
+          <div class="match-bar" onclick="event.stopPropagation()">
+            <span>Looks paid by <strong>ČSOB −24 500 Kč</strong> today.</span>
+            <div class="match-actions">
+              <button type="button" class="btn btn-sm btn-primary" onclick="resolveMatch(true)">Confirm paid</button>
+              <button type="button" class="btn btn-sm" onclick="resolveMatch(false)">Keep separate</button>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  };
+
+  let html = '';
+  let lastDate = '';
+  doneRows.forEach(r => { html += renderDesktopRow(r, lastDate); lastDate = r.date; });
+
+  if (state.filter !== 'done') {
+    html += `
+      <div class="today-divider" id="todayDivider">
+        <span class="today-pill">Today · 22 Nov</span>
+        <span class="today-line"></span>
+        <span class="today-bal">${fmt(available)} Kč available</span>
+      </div>
+    `;
+    lastDate = '';
+    plannedRows.forEach(r => { html += renderDesktopRow(r, lastDate); lastDate = r.date; });
+  }
+  document.getElementById('timelineList').innerHTML = html;
+
+  // Phone Timeline
+  let pHtml = '';
+  const phoneRows = [...doneRows.slice(-3), ...plannedRows];
+  let placedToday = false;
+  phoneRows.forEach(r => {
+    if (r.kind === 'planned' && !placedToday) {
+      placedToday = true;
+      pHtml += `<div class="today-divider" style="padding:6px 12px;"><span class="today-pill">Today · 22 Nov</span><span class="today-line"></span><span class="today-bal">${fmt(available)}</span></div>`;
+    }
+    pHtml += `
+      <div class="phone-row" onclick="openTxDrawer('${r.id}')">
+        <div class="cat-tile ${r.displayAmount > 0 ? 'income' : ''}">${r.icon}</div>
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:13.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.displayName}</div>
+          <div style="font-size:11.5px;color:var(--stor-faint);">${r.day} · ${r.cat}${r.recurring ? ' · ↻' : ''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="tx-amount ${r.displayAmount >= 0 ? 'pos' : 'neg'}" style="font-size:13.5px;">${fmt(r.displayAmount, true)}</div>
+          ${r.balanceAfter !== null ? `<div style="font-size:11px;color:${r.balanceAfter < state.floor ? 'var(--stor-negative)' : 'var(--stor-faint)'};">${fmt(r.balanceAfter)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  });
+  document.getElementById('phoneTimelineList').innerHTML = pHtml;
+
+  // Accounts (Desktop Rail + Phone Sheet)
+  const acctHtml = state.accounts.map(a => `
+    <button type="button" class="acct-row" onclick="openAccountDrawer('${a.id}')">
+      <span class="acct-mark">${a.mark}</span>
+      <span class="acct-info">
+        <span class="acct-name">${a.name}</span>
+        <span class="acct-sub ${a.status === 'warn' ? 'warn' : ''}">
+          <span class="dot ${a.status === 'warn' ? 'warn' : a.status === 'hand' ? 'muted' : ''}"></span>
+          ${a.provider}
+        </span>
+      </span>
+      <span class="acct-bal ${a.balance < 0 ? 'neg' : ''}">${fmt(a.balance)} Kč</span>
+    </button>
+  `).join('');
+  document.getElementById('accountsList').innerHTML = acctHtml;
+  document.getElementById('phoneAccountsList').innerHTML = acctHtml;
+
+  // Budget & Recurring Tables
+  renderBudgetRows('budgetIncomeRows', state.budgetIncome, true);
+  renderBudgetRows('budgetExpenseRows', state.budgetExpense, false);
+
+  const allBud = [...state.budgetIncome, ...state.budgetExpense];
+  const autoOn = allBud.filter(b => b.auto).length;
+  document.getElementById('budAutoCount').textContent = `${autoOn} / ${allBud.length}`;
+}
+
+function renderBudgetRows(containerId, items, isIncome) {
+  document.getElementById(containerId).innerHTML = items.map(item => {
+    const pct = Math.min(100, Math.round((item.actual / item.amount) * 100));
+    const over = !isIncome && item.actual > item.amount;
+    const done = item.actual >= item.amount && !over;
+    return `
+      <div class="budget-row">
+        <div class="cat-tile ${isIncome ? 'income' : ''}">${item.icon}</div>
+        <div style="min-width:0;">
+          <div style="font-size:13.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
+          <div style="font-size:11.5px;color:var(--stor-faint);">${item.cat}</div>
+        </div>
+        <div class="hide-sm">
+          <button type="button" class="rule-btn ${item.auto ? '' : 'off'}" onclick="openRuleDrawer('${item.id}')">
+            ${item.auto ? `↻ ${item.rule}` : 'Plan only'}
+          </button>
+        </div>
+        <div class="actual-bar-wrap hide-sm">
+          <div class="actual-meta">
+            <span>Nov actual</span>
+            <strong style="color:${over ? 'var(--stor-negative)' : 'var(--stor-ink)'}">${fmt(item.actual)} / ${fmt(item.amount)}</strong>
+          </div>
+          <div class="actual-track">
+            <div class="actual-fill ${over ? 'over' : done ? 'done' : ''}" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <div class="tx-amount ${isIncome ? 'pos' : 'neg'}">${isIncome ? '+' : ''}${fmt(item.amount)} Kč</div>
+        <button type="button" class="switch ${item.auto ? 'on' : ''}" role="switch" aria-checked="${item.auto}" aria-label="Auto-schedule ${item.name} on timeline" onclick="toggleAutoRule('${item.id}')"></button>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ==========================================================================
+   Interactions & Drawers
+   ========================================================================== */
+function flashRow(id) {
+  const el = document.querySelector(`[data-row-id="${id}"]`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1400);
+}
+
+function resolveMatch(confirm) {
+  state.planMatchedResolved = true;
+  if (confirm) {
+    state.rows = state.rows.filter(r => r.id !== 'p1');
+    state.reviewPending = Math.max(0, state.reviewPending - 1);
+    showToast('Nájem bytu settled by bank payment · Undo');
+  } else {
+    const p1 = state.rows.find(r => r.id === 'p1');
+    if (p1) p1.paused = false;
+    state.reviewPending = Math.max(0, state.reviewPending - 1);
+    showToast('Kept separate — plan counts in runway again');
+  }
+  render();
+}
+
+function toggleAutoRule(id) {
+  const item = [...state.budgetIncome, ...state.budgetExpense].find(b => b.id === id);
+  if (!item) return;
+  item.auto = !item.auto;
+  if (item.auto && item.rule === 'Monthly budget only') item.rule = 'Monthly · 1st';
+  showToast(item.auto ? `Scheduled "${item.name}" onto Cash Flow timeline` : `Paused recurring rule for "${item.name}"`);
+  render();
+}
+
+function openDrawer(title, bodyHtml) {
+  document.getElementById('drawerTitle').textContent = title;
+  document.getElementById('drawerBody').innerHTML = bodyHtml;
+  document.getElementById('drawerBackdrop').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawerBackdrop').classList.remove('open');
+}
+
+function openReviewDrawer() {
+  openDrawer('Review bank activity', `
+    <p style="margin:0;color:var(--stor-muted);font-size:13px;">Bank sync brought 3 items that need a quick decision before they settle into your timeline.</p>
+    <div class="drawer-card">
+      <div class="metric-label">Matched plan · ČSOB</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin:6px 0;">
+        <strong>Nájem bytu</strong>
+        <strong>−24 500 Kč</strong>
+      </div>
+      <p style="margin:0 0 10px;font-size:12px;color:var(--stor-muted);">Bank transfer today matches your recurring plan on 22 Nov.</p>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="btn btn-sm btn-primary" onclick="resolveMatch(true); closeDrawer();">Confirm paid</button>
+        <button type="button" class="btn btn-sm" onclick="resolveMatch(false); closeDrawer();">Keep separate</button>
+      </div>
+    </div>
+    <div class="drawer-card">
+      <div class="metric-label">Possible transfer · ČSOB → Air Bank</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin:6px 0;">
+        <strong>Převod na spořicí účet</strong>
+        <strong>15 000 Kč</strong>
+      </div>
+      <p style="margin:0 0 10px;font-size:12px;color:var(--stor-muted);">Mark as transfer between your accounts so it stays out of spending totals.</p>
+      <button type="button" class="btn btn-sm btn-primary" onclick="state.reviewPending=Math.max(0,state.reviewPending-1); render(); closeDrawer(); showToast('Marked as transfer between accounts');">Mark as transfer</button>
+    </div>
+    <div class="drawer-card">
+      <div class="metric-label">New card payment · ČS</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin:6px 0;">
+        <strong>Shell Čerpací stanice</strong>
+        <strong>−1 650 Kč</strong>
+      </div>
+      <p style="margin:0 0 10px;font-size:12px;color:var(--stor-muted);">Auto-categorized as Transport.</p>
+      <button type="button" class="btn btn-sm" onclick="state.reviewPending=Math.max(0,state.reviewPending-1); render(); closeDrawer(); showToast('Accepted bank transaction');">Looks good</button>
+    </div>
+  `);
+}
+
+function openAccountDrawer(id) {
+  const a = state.accounts.find(x => x.id === id);
+  if (!a) return;
+  openDrawer(a.name, `
+    <div class="drawer-card">
+      <div class="metric-label">Current balance</div>
+      <div style="font-size:28px;font-weight:650;letter-spacing:-0.02em;margin-top:4px;color:${a.balance < 0 ? 'var(--stor-negative)' : 'var(--stor-ink)'}">${fmt(a.balance)} Kč</div>
+      <div style="font-size:12px;color:var(--stor-muted);margin-top:4px;">${a.provider}</div>
+    </div>
+    ${a.status === 'warn' ? `
+      <div class="drawer-card" style="background:var(--stor-warning-soft);border-color:transparent;">
+        <strong style="color:var(--stor-warning);display:block;margin-bottom:4px;">Bank approval expires in 5 days</strong>
+        <p style="margin:0 0 10px;font-size:12.5px;">Renew your Enable Banking consent for Revolut so transactions keep arriving automatically.</p>
+        <button type="button" class="btn btn-sm btn-primary" onclick="closeDrawer(); showToast('Redirecting to Revolut approval…')">Renew bank approval</button>
+      </div>
+    ` : ''}
+    <div style="display:flex;gap:8px;margin-top:auto;">
+      <button type="button" class="btn" style="flex:1" onclick="closeDrawer(); showToast('Import PDF statement for ${a.name}')">Import PDF statement</button>
+      <button type="button" class="btn btn-quiet" onclick="closeDrawer()">Close</button>
+    </div>
+  `);
+}
+
+function openRuleDrawer(id) {
+  const item = [...state.budgetIncome, ...state.budgetExpense].find(b => b.id === id);
+  if (!item) return;
+  openDrawer(`Recurring rule`, `
+    <div class="drawer-card">
+      <div style="font-weight:600;font-size:15px;">${item.icon} ${item.name}</div>
+      <div style="font-size:12.5px;color:var(--stor-muted);margin-top:2px;">${fmt(item.amount)} Kč · ${item.cat}</div>
+    </div>
+    <div class="field">
+      <label>Cadence</label>
+      <select>
+        <option selected>Monthly</option>
+        <option>Quarterly</option>
+        <option>Yearly</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Day of month</label>
+      <input type="number" value="22" min="1" max="31">
+    </div>
+    <div class="drawer-card">
+      <div class="metric-label">Next 3 projected dates on Cash Flow</div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px;font-size:12.5px;">
+        <div>• 22 Dec 2026 — <strong>${fmt(item.amount)} Kč</strong></div>
+        <div>• 22 Jan 2027 — <strong>${fmt(item.amount)} Kč</strong></div>
+        <div>• 22 Feb 2027 — <strong>${fmt(item.amount)} Kč</strong></div>
+      </div>
+    </div>
+    <button type="button" class="btn btn-primary" onclick="item_save('${item.id}')">Save recurring rule</button>
+  `);
+}
+
+window.item_save = function(id) {
+  const item = [...state.budgetIncome, ...state.budgetExpense].find(b => b.id === id);
+  if (item) { item.auto = true; item.rule = 'Monthly · 22nd'; }
+  closeDrawer();
+  render();
+  showToast('Recurring rule saved — timeline updated');
+};
+
+function openTxDrawer(id) {
+  const r = state.rows.find(x => x.id === id);
+  if (!r) return;
+  openDrawer(r.kind === 'planned' ? 'Planned transaction' : 'Transaction', `
+    <div class="field">
+      <label>Name</label>
+      <input value="${r.name}">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="field"><label>Amount (Kč)</label><input value="${Math.abs(r.amount)}"></div>
+      <div class="field"><label>Date</label><input type="date" value="${r.date}"></div>
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <select><option selected>${r.cat}</option><option>Housing</option><option>Food</option><option>Transport</option><option>Subscriptions</option></select>
+    </div>
+    ${r.recurring ? `<div class="drawer-card" style="font-size:12.5px;">↻ Driven by recurring budget rule <strong>${r.recurring}</strong>. Editing here changes only this occurrence.</div>` : ''}
+    <div style="display:flex;gap:8px;margin-top:auto;">
+      <button type="button" class="btn btn-primary" style="flex:1" onclick="closeDrawer(); showToast('Transaction updated')">Save changes</button>
+      <button type="button" class="btn btn-quiet" onclick="closeDrawer()">Cancel</button>
+    </div>
+  `);
+}
+
+function togglePhoneSheet(open) {
+  document.getElementById('phoneSheet').classList.toggle('open', open);
+}
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+/* ==========================================================================
+   Event Wiring
+   ========================================================================== */
+function switchTab(tab) {
+  state.tab = tab;
+  document.getElementById('tabCashflow').classList.toggle('hidden', tab !== 'cashflow');
+  document.getElementById('tabBudget').classList.toggle('hidden', tab !== 'budget');
+  document.getElementById('primaryActionBtn').textContent = tab === 'cashflow' ? '+ Add transaction' : '+ Add budget item';
+  document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('[data-tab-jump]').forEach(b => {
+    if (b.classList.contains('nav-sub')) b.classList.toggle('active', b.dataset.tabJump === tab);
+  });
+}
+
+document.querySelectorAll('[data-tab], [data-tab-jump]').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab || btn.dataset.tabJump));
+});
+
+document.querySelectorAll('[data-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.filter = btn.dataset.filter;
+    document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b === btn));
+    render();
+  });
+});
+
+document.querySelectorAll('[data-viewport]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const v = btn.dataset.viewport;
+    document.querySelectorAll('[data-viewport]').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('desktopShell').classList.toggle('hidden', v !== 'desktop');
+    document.getElementById('phoneStage').classList.toggle('active', v === 'phone');
+  });
+});
+
+document.querySelectorAll('[data-scenario]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.scenario = btn.dataset.scenario;
+    document.querySelectorAll('[data-scenario]').forEach(b => b.classList.toggle('active', b === btn));
+    render();
+  });
+});
+
+document.querySelectorAll('[data-theme-btn]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = btn.dataset.themeBtn;
+    document.documentElement.setAttribute('data-theme', t);
+    document.querySelectorAll('[data-theme-btn]').forEach(b => b.classList.toggle('active', b === btn));
+  });
+});
+
+document.getElementById('floorInput').addEventListener('change', (e) => {
+  const num = Number(e.target.value.replace(/\s+/g, '').replace(/[^\d]/g, ''));
+  if (!Number.isNaN(num)) {
+    state.floor = num;
+    e.target.value = fmt(num);
+    render();
+    showToast(`Safety floor updated to ${fmt(num)} Kč`);
+  }
+});
+
+document.getElementById('jumpLowBtn').addEventListener('click', () => {
+  const { low } = computeProjection();
+  if (low.id && low.id !== 'today') flashRow(low.id);
+});
+
+document.getElementById('scrollTodayBtn').addEventListener('click', () => {
+  document.getElementById('todayDivider')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
+document.getElementById('openReviewBtn').addEventListener('click', openReviewDrawer);
+document.getElementById('phoneGlanceBtn').addEventListener('click', () => togglePhoneSheet(true));
+
+document.querySelectorAll('[data-plan]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-plan]').forEach(b => b.classList.toggle('active', b === btn));
+    showToast(`Switched to "${btn.textContent.trim().split('\n')[0]}" scenario`);
+  });
+});
+
+render();
+</script>
+</body>
+</html>
