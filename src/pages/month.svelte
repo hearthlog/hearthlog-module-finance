@@ -721,7 +721,11 @@
 <svelte:window onkeydown={handleKeydown}></svelte:window>
 
 {#snippet financeNavigation()}
-    <RouteTabs label="Finance views" tabs={financeTabs} />
+    <!-- One row with the page actions: the views (which the expanded sidebar lists, so they hide there) and, on desktop, the month controls. -->
+    <div class="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2">
+        <div class="stor-sidebar-owned-tabs min-w-0 max-w-full"><RouteTabs label="Finance views" tabs={financeTabs} /></div>
+        {#if !isBudgetTab}<div class="hidden min-w-0 lg:block">{@render financePeriod()}</div>{/if}
+    </div>
 {/snippet}
 
 {#snippet financePeriod()}
@@ -763,14 +767,9 @@
     {/if}
 {/snippet}
 
-<!-- On desktop the controls sit in the header; on smaller screens they head the view, which fills the screen. -->
-{#snippet headerPeriod()}
-    <div class="mt-3 hidden lg:block">{@render financePeriod()}</div>
-{/snippet}
-
 <!-- The transactions fit the screen at every size, so the list is the only thing that scrolls. -->
 <div class="flex min-h-0 flex-col {isBudgetTab ? 'lg:h-full' : 'h-full'}">
-    <PageHeader title="Finance" class="shrink-0 px-2.5 pt-2 pb-1 max-md:sr-only sm:px-3 sm:pt-4 sm:pb-2" sidebarTabs tabs={financeNavigation} context={headerPeriod}>
+    <PageHeader title="Finance" class="shrink-0 px-2.5 pt-2 pb-1 max-md:sr-only sm:px-3 sm:pt-4 sm:pb-2" tabs={financeNavigation}>
         {#if !isBudgetTab}
             <CommandOnly>
                 <Button class="hidden lg:inline-flex" data-testid="open-transaction-drawer" data-stor-new shortcut="N" onclick={() => openAddTransaction(undefined, show === "done" ? "archived" : "active")}>
