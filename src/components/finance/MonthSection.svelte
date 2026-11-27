@@ -177,7 +177,6 @@
         gap: 0.75rem;
         margin: 0;
         padding: 1.5rem 0 0.625rem;
-        border-bottom: 1px solid var(--stor-border-strong);
         background: var(--stor-surface);
     }
     .empty .month-head { position: relative; padding-top: 0.75rem; opacity: 0.7; }

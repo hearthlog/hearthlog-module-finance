@@ -118,7 +118,7 @@
         </Label>
 
         {#if errorMessage}
-            <div class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+            <div class="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
                 {errorMessage}
             </div>
         {/if}

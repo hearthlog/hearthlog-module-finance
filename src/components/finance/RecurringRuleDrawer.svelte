@@ -67,14 +67,14 @@
 <Drawer {show} title="Recurring schedule" onClose={onClose}>
     {#if item}
         <form class="flex flex-col gap-4" onsubmit={submit}>
-            <div class="rounded-xl border border-[var(--stor-hairline)] bg-[var(--stor-surface-muted)] p-3.5">
+            <div class="rounded-xl bg-[var(--stor-surface-muted)] p-3.5">
                 <div class="text-sm font-semibold text-[var(--stor-ink)]">{item.name}</div>
                 <div class="mt-0.5 text-xs text-[var(--stor-muted-text)]">
                     {formatMoney(Number(item.amount))} · {categoryLabel(item.category)}
                 </div>
             </div>
 
-            <div class="flex items-center justify-between gap-3 rounded-xl border border-[var(--stor-hairline)] bg-[var(--stor-surface)] px-3.5 py-3">
+            <div class="flex items-center justify-between gap-3 rounded-xl bg-[var(--stor-surface)] px-3.5 py-3">
                 <div>
                     <div class="text-sm font-medium text-[var(--stor-ink)]">Auto-populate Cash Flow</div>
                     <div class="text-xs text-[var(--stor-muted-text)]">Creates upcoming planned rows on the timeline</div>
@@ -84,7 +84,7 @@
                     role="switch"
                     aria-checked={enabled}
                     aria-label="Enable recurring schedule"
-                    class="relative h-6 w-10 shrink-0 rounded-full transition-colors {enabled ? 'bg-[var(--stor-action)]' : 'bg-[var(--stor-surface-well)] shadow-[inset_0_0_0_1px_var(--stor-border)]'}"
+                    class="relative h-6 w-10 shrink-0 rounded-full transition-colors {enabled ? 'bg-[var(--stor-action)]' : 'bg-[var(--stor-surface-well)] shadow-[inset_0_0_0_1.5px_var(--stor-field-line)]'}"
                     onclick={() => (enabled = !enabled)}
                 >
                     <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-[left] {enabled ? 'left-[18px]' : 'left-0.5'}"></span>
@@ -122,7 +122,7 @@
                     />
                 </div>
 
-                <div class="rounded-xl border border-[var(--stor-hairline)] bg-[var(--stor-surface-muted)] p-3.5">
+                <div class="rounded-xl bg-[var(--stor-surface-muted)] p-3.5">
                     <div class="text-[11px] font-semibold uppercase tracking-wider text-[var(--stor-muted-text)]">
                         Next 3 dates on Cash Flow
                     </div>

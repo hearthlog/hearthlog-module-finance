@@ -222,7 +222,6 @@
         top: 0;
         right: 0.5rem;
         left: calc(var(--check) + var(--gap) + 0.5rem);
-        border-top: 1px solid var(--stor-border);
     }
     .timeline-row:hover,
     .timeline-row.highlighted { background: var(--stor-surface-hover); }

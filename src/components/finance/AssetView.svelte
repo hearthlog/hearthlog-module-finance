@@ -128,7 +128,7 @@
                 </CommandOnly>
             </div>
             {#if assetError}
-                <div class="mx-4 mt-3 rounded-lg border border-[color-mix(in_srgb,var(--stor-negative),transparent_35%)] bg-[var(--stor-negative-soft)] px-3 py-2 text-sm text-[var(--stor-negative)]">
+                <div class="mx-4 mt-3 rounded-lg bg-[var(--stor-negative-soft)] px-3 py-2 text-sm text-[var(--stor-negative)]">
                     {assetError}
                     <button
                         onclick={() => (assetError = null)}
@@ -149,7 +149,7 @@
                 {/if}
             </ul>
             {#if !loading && sortedAssets.length > 0}
-                <div class="mx-4 flex items-center justify-between border-t border-[var(--stor-border)] py-2 text-sm font-semibold text-[var(--stor-ink)]">
+                <div class="mx-4 flex items-center justify-between py-2 text-sm font-semibold text-[var(--stor-ink)]">
                     <span>Total assets</span><span class="tabular-nums"><DataValue>{assetMoney.format(assetsSum)}</DataValue></span>
                 </div>
             {/if}

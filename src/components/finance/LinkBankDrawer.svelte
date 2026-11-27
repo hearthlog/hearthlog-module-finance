@@ -251,7 +251,7 @@
     .link { display: flex; flex-direction: column; gap: 14px; font-size: 14px; line-height: 20px; }
     .link p { margin: 0; }
     .options { display: flex; flex-direction: column; }
-    .option { display: flex; min-height: 56px; align-items: center; gap: 12px; border-top: 1px solid var(--stor-rule); cursor: pointer; }
+    .option { display: flex; min-height: 56px; align-items: center; gap: 12px; cursor: pointer; }
     .option:first-child { border-top: 0; }
     .option input { order: 3; margin-left: auto; accent-color: var(--stor-action); }
     .option.disabled { opacity: 0.55; cursor: default; }
@@ -272,7 +272,7 @@
     .panel.unread { background: var(--stor-warning-soft); }
     .unread-head { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: 0; background: transparent; padding: 0; text-align: left; color: inherit; }
     .unread-text { max-height: 12rem; overflow: auto; margin: 0; padding: 8px; border-radius: 8px; background: var(--stor-surface); font: 12px/17px inherit; white-space: pre-wrap; }
-    select { height: 38px; border: 1px solid var(--stor-field-border); border-radius: 9px; background: var(--stor-surface); color: inherit; font: inherit; }
+    select { height: 38px; border: 0; border-radius: 9px; background: var(--stor-field-fill); box-shadow: var(--stor-field-inset), inset 0 -1.5px 0 var(--stor-field-line); color: inherit; font: inherit; }
     .segment { display: inline-flex; align-self: flex-start; padding: 3px; border-radius: 10px; background: var(--stor-surface-muted); }
     .segment label { padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
     .segment label.on { background: var(--stor-surface-raised); box-shadow: var(--stor-elevation-2); }

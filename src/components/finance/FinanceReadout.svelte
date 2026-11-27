@@ -198,7 +198,7 @@
                     <b class="shrink-0 font-semibold tabular-nums" class:text-[var(--stor-faint-text)]={account.frozen}>{formatAmount(account.available)} Kč</b>
                 </button>
             {:else}
-                <div class="flex min-h-12 items-center justify-between gap-3 border-b border-[color-mix(in_srgb,var(--stor-border)_62%,transparent)] text-[15px]">
+                <div class="flex min-h-12 items-center justify-between gap-3 text-[15px]">
                     {#if linked}<BankMark />{/if}
                     <span class="min-w-0 flex-1 truncate text-[var(--stor-ink)]">{account.name}</span>
                     <b class="shrink-0 font-semibold tabular-nums text-[var(--stor-ink)]">{formatAmount(account.balance)} Kč</b>
@@ -247,13 +247,12 @@
 <style>
     .readout-shell:not(.sheet) {
         overflow: hidden;
-        border-block: 1px solid var(--stor-border);
     }
     .readout {
         display: grid;
         grid-template-columns: 1.5fr repeat(3, minmax(0, 1fr));
     }
-    .cell { position: relative; min-width: 0; padding: 0.875rem 1.25rem; border-left: 1px solid var(--stor-border); }
+    .cell { position: relative; min-width: 0; padding: 0.875rem 1.25rem; }
     .cell:first-child { border-left: 0; padding-left: 0; }
     .cell-static { padding: 0.875rem 1.25rem; }
     .spark-band { padding: 0 1.25rem 0.75rem; }
@@ -261,7 +260,6 @@
     /* From 640px the outlook + sparkline is one calm editorial card. */
     @media (min-width: 640px) {
         .readout-shell:not(.sheet) {
-            border: 1px solid var(--stor-hairline);
             border-radius: var(--stor-section-radius);
             background: var(--stor-surface);
             box-shadow: var(--stor-elevation-1);
@@ -295,7 +293,7 @@
     .stamp.stale .dot { background: var(--stor-warning); }
     .stamp.dead { color: var(--stor-negative); }
     .stamp.dead .dot { background: var(--stor-negative); }
-    .sheet-account { display: flex; width: 100%; min-height: 3.5rem; align-items: center; gap: 0.75rem; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--stor-border) 62%, transparent); background: transparent; font-size: 15px; color: var(--stor-ink); }
+    .sheet-account { display: flex; width: 100%; min-height: 3.5rem; align-items: center; gap: 0.75rem; border: 0; background: transparent; font-size: 15px; color: var(--stor-ink); }
     .sheet-detail { overflow: hidden; font-size: 12px; line-height: 16px; color: var(--stor-faint-text); text-overflow: ellipsis; white-space: nowrap; }
     .sheet-detail.stale { color: var(--stor-warning); }
     .sheet-detail.dead { color: var(--stor-negative); }
@@ -321,14 +319,14 @@
     .sheet .cell:first-child { padding-left: 1rem; }
     .sheet .lead .cell-button { padding-left: 1rem; }
     .sheet .cell:nth-child(3) { border-left: 0; }
-    .sheet .extra { border-top: 1px solid var(--stor-border); }
+    .sheet .extra { }
     /* Phones keep the outlook to one short row: label and figure, the details once it is opened. */
     @media (max-width: 639px) {
         .readout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .cell, .cell-button { padding: 0.5rem 0.75rem; }
         .readout:not(.open) :global(.stor-metric-support) { display: none; }
         .extra { display: none; }
-        .open .extra { display: block; border-top: 1px solid var(--stor-border); }
+        .open .extra { display: block; }
         .open .cell:nth-child(3) { border-left: 0; }
     }
 </style>

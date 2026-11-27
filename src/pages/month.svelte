@@ -842,7 +842,7 @@
                             onclickcapture={selectingClick}
                         >
                             <!-- Phones: the month in view, what needs sorting, and the options; the list does the rest. -->
-                            <div class="flex h-12 shrink-0 items-center gap-1.5 border-b border-[color-mix(in_srgb,var(--stor-border)_62%,transparent)] pl-2 pr-1 md:hidden">
+                            <div class="flex h-12 shrink-0 items-center gap-1.5 pl-2 pr-1 md:hidden">
                                 <MonthNavigator
                                     year={year}
                                     month={month}
@@ -981,13 +981,13 @@
                 >{option.label}{#if filterCount(option.id) !== null}<span class="stor-tab-count ml-1.5">{filterCount(option.id)}</span>{/if}</a>
             {/each}
         </nav>
-        <div class="mt-2 flex flex-col divide-y divide-[color-mix(in_srgb,var(--stor-border)_62%,transparent)]">
+        <div class="mt-2 flex flex-col ">
             <button type="button" class="flex min-h-16 items-center gap-3 text-left" role="switch" aria-checked={phoneBalance} onclick={togglePhoneBalance}>
                 <span class="min-w-0 flex-1">
                     <span class="block text-[15px] font-medium text-[var(--stor-ink)]">Running balance</span>
                     <span class="block text-[12.5px] text-[var(--stor-muted-text)]">The balance after each plan and each month's figures</span>
                 </span>
-                <span class="relative h-[30px] w-12 shrink-0 rounded-full transition-colors {phoneBalance ? 'bg-[var(--stor-action)]' : 'bg-[var(--stor-surface-well)] shadow-[inset_0_0_0_1px_var(--stor-border)]'}" aria-hidden="true">
+                <span class="relative h-[30px] w-12 shrink-0 rounded-full transition-colors {phoneBalance ? 'bg-[var(--stor-action)]' : 'bg-[var(--stor-surface-well)] shadow-[inset_0_0_0_1.5px_var(--stor-field-line)]'}" aria-hidden="true">
                     <span class="absolute top-[3px] h-6 w-6 rounded-full bg-white shadow transition-[left] {phoneBalance ? 'left-[21px]' : 'left-[3px]'}"></span>
                 </span>
             </button>
