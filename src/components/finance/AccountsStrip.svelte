@@ -61,13 +61,11 @@
 <style>
     .strip-card {
         overflow: hidden;
-        border: 1px solid var(--stor-hairline);
         border-radius: var(--stor-section-radius);
         background: var(--stor-surface);
         box-shadow: var(--stor-elevation-1);
     }
-    /* Each account draws the hairlines on its left and top; the list clips the ones on the outer edge, so any number
-       of accounts wraps cleanly and an unfilled last row stays plain surface. */
+    /* Accounts sit side by side with space between them, no dividers; any number wraps cleanly. */
     .accounts {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
@@ -76,7 +74,7 @@
         padding: 0;
         list-style: none;
     }
-    .accounts li { min-width: 0; box-shadow: -1px 0 0 var(--stor-rule), 0 -1px 0 var(--stor-rule); }
+    .accounts li { min-width: 0; }
     .account {
         display: flex;
         width: 100%;
@@ -109,7 +107,6 @@
         justify-content: space-between;
         gap: 8px 12px;
         padding: 10px 16px;
-        border-top: 1px solid var(--stor-rule);
         background: var(--stor-surface-muted);
     }
     .caption { font-size: 12px; line-height: 16px; color: var(--stor-muted-text); }

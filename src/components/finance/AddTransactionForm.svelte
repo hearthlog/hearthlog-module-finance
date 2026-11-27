@@ -72,7 +72,7 @@
 {#if transactionError}
 	<li class="col-span-3 mb-2">
 		<div
-			class="px-3 py-2 bg-red-100 border border-red-300 text-red-700 rounded text-sm"
+			class="px-3 py-2 bg-red-100 text-red-700 rounded text-sm"
 		>
 			{transactionError}
 			<button
@@ -101,7 +101,7 @@
 				placeholder="Transaction name"
 				bind:value={name}
 				required
-				class="h-10 lg:h-9 w-full px-3 rounded border border-[var(--stor-field-border)] text-base lg:text-sm"
+				class="h-10 lg:h-9 w-full px-3 stor-field-control text-base lg:text-sm"
 			/>
 		</span>
 		<span class="text-right">
@@ -111,7 +111,7 @@
 				bind:value={amount}
 				required
 				step="0.01"
-				class="h-10 lg:h-9 w-28 px-3 rounded border border-[var(--stor-field-border)] text-base lg:text-sm text-right"
+				class="h-10 lg:h-9 w-28 px-3 stor-field-control text-base lg:text-sm text-right"
 			/>
 		</span>
 		<span class="text-right flex items-center justify-end">

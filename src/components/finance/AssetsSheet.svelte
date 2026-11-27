@@ -95,7 +95,7 @@
     <Drawer {show} title="Assets" {onClose}>
         <form id="assets-sheet-form" class="flex flex-col" onsubmit={save}>
             {#each rows as row (row.id)}
-                <div class="grid grid-cols-[minmax(0,1fr)_8.5rem_2.25rem] items-center gap-2 border-b border-[color-mix(in_srgb,var(--stor-border)_62%,transparent)] py-2 {row.removed ? 'opacity-45' : ''}">
+                <div class="grid grid-cols-[minmax(0,1fr)_8.5rem_2.25rem] items-center gap-2 py-2 {row.removed ? 'opacity-45' : ''}">
                     <label><span class="sr-only">Asset name</span>
                         <input bind:value={row.name} placeholder={row.original ? "" : "New asset"} disabled={row.removed} class="h-11 w-full min-w-0 bg-transparent text-[15px] font-medium text-[var(--stor-ink)] outline-none placeholder:text-[var(--stor-muted-text)] {row.removed ? 'line-through' : ''}" />
                     </label>

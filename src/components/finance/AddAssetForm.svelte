@@ -29,7 +29,7 @@
 				placeholder="Savings account"
 				required
 				autofocus
-				class="mt-1 h-9 min-w-0 w-full rounded-lg border border-[var(--stor-field-border)] bg-white px-2.5 text-sm"
+				class="mt-1 h-9 min-w-0 w-full stor-field-control px-2.5 text-sm"
 			/>
 		</label>
 		<label class="block text-xs font-semibold text-stone-600">
@@ -41,7 +41,7 @@
 				required
 				min="0.01"
 				step="0.01"
-				class="mt-1 h-9 min-w-0 w-full rounded-lg border border-[var(--stor-field-border)] bg-white px-2.5 text-right text-sm tabular-nums"
+				class="mt-1 h-9 min-w-0 w-full stor-field-control px-2.5 text-right text-sm tabular-nums"
 			/>
 		</label>
 	</div>

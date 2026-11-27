@@ -122,7 +122,7 @@
     });
 </script>
 
-<div class="budget-table border-t border-[var(--stor-border)]" data-testid={`budget-group-${type}`}>
+<div class="budget-table " data-testid={`budget-group-${type}`}>
     <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-[var(--stor-surface-muted)]/55 px-4 py-2.5 max-md:pl-4">
         <div class="flex items-center gap-1.5">
             <label class="flex h-9 w-9 items-center justify-center max-md:hidden">
@@ -154,7 +154,7 @@
     <!-- Phones read the plan as a list: name and category, then the amount; a tap edits the item. -->
     <ul class="md:hidden">
         {#each items as item (item.id)}
-            <li class="[&+li]:border-t [&+li]:border-[color-mix(in_srgb,var(--stor-border)_62%,transparent)]">
+            <li class="">
                 <button type="button" class="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left" onclick={() => onEdit(item)}>
                     <span class="min-w-0 flex-1">
                         <span class="block truncate text-[15px] font-medium text-[var(--stor-ink)]">{item.name}</span>

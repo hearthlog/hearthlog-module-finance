@@ -315,7 +315,7 @@
     .figure.frozen { color: var(--stor-faint-text); }
     .split { font-size: 12px; line-height: 16px; color: var(--stor-muted-text); font-variant-numeric: tabular-nums; }
     .overdraft { display: inline-flex; align-items: baseline; gap: 4px; }
-    .overdraft input { width: 9ch; padding: 2px 6px; border: 1px solid var(--stor-border); border-radius: 6px; background: transparent; color: var(--stor-ink); font: inherit; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+    .overdraft input { width: 9ch; padding: 2px 6px; border-radius: 6px; border: 0; background: var(--stor-surface-well); box-shadow: inset 0 -1.5px 0 var(--stor-field-line); color: var(--stor-ink); font: inherit; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
     .overdraft input:focus { outline: 2px solid var(--stor-accent-strong); outline-offset: 1px; }
     .overdraft small { color: var(--stor-muted-text); }
     .stamp { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--stor-muted-text); }
@@ -328,20 +328,20 @@
     .group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
     .group-head h3 { margin: 0; font-size: 15px; line-height: 22px; font-weight: 600; }
     .group-head span { font-size: 12px; line-height: 16px; color: var(--stor-muted-text); }
-    .card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--stor-hairline); border-radius: 14px; background: var(--stor-surface); box-shadow: var(--stor-elevation-1); }
+    .card { display: flex; flex-direction: column; overflow: hidden; border-radius: 14px; background: var(--stor-surface); box-shadow: var(--stor-elevation-1); }
     .card.list { padding: 0 16px; }
     .gap-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .gap-grid > span { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; font-variant-numeric: tabular-nums; }
-    .gap-grid > span + span { border-left: 1px solid var(--stor-rule); }
+    .gap-grid > span + span { }
     .gap-grid small { font-size: 12px; color: var(--stor-muted-text); }
     .gap-grid b { font-weight: 600; }
     .warn { color: var(--stor-warning) !important; font-weight: 600; }
-    .card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 12px 10px 16px; border-top: 1px solid var(--stor-rule); background: var(--stor-surface-muted); }
+    .card-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 12px 10px 16px; background: var(--stor-surface-muted); }
     .why { flex: 1 1 14rem; font-size: 12px; line-height: 16px; color: var(--stor-muted-text); }
     .note { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 12px; line-height: 18px; }
     .note.warn { background: var(--stor-warning-soft); font-weight: 500; }
     .note.negative { background: var(--stor-negative-soft); color: var(--stor-negative); }
-    .line, .kv { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--stor-rule); font-size: 13px; }
+    .line, .kv { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
     .line:first-child, .kv:first-child { border-top: 0; }
     .line-main { display: flex; min-width: 0; align-items: center; gap: 10px; }
     .line-name { overflow: hidden; font-weight: 500; color: var(--stor-ink); text-overflow: ellipsis; white-space: nowrap; }
@@ -354,7 +354,7 @@
     .kv span, .kv label { color: var(--stor-muted-text); }
     .kv b { font-weight: 500; color: var(--stor-ink); text-align: right; }
     .kv small { font-weight: 400; color: var(--stor-faint-text); }
-    .mail { border-top: 1px solid var(--stor-rule); }
+    .mail { }
     .mail:first-child { border-top: 0; }
     .mail .line { border-top: 0; }
     .mail-open { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; padding: 8px 0; border: 0; background: transparent; text-align: left; color: inherit; }

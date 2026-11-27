@@ -330,7 +330,7 @@
 
 {#snippet budgetSection(type: "income" | "expense", label: string, total: number, items: BudgetItem[])}
     <section class="stor-panel overflow-hidden" data-testid={`budget-group-${type}`}>
-        <div class="flex items-center justify-between gap-3 border-b border-[var(--stor-rule)] bg-[var(--stor-surface-muted)] px-4 py-3">
+        <div class="flex items-center justify-between gap-3 bg-[var(--stor-surface-muted)] px-4 py-3">
             <div class="flex items-baseline gap-2.5">
                 <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--stor-muted-text)]">{label}</h3>
                 <span class="text-xs font-semibold tabular-nums {type === 'income' ? 'text-[var(--stor-positive)]' : 'text-[var(--stor-muted-text)]'}">
@@ -351,7 +351,7 @@
                 </button>
             </CommandOnly>
         {:else}
-            <div class="divide-y divide-[var(--stor-rule)]">
+            <div class="">
                 {#each items as item (item.id)}
                     {@const Icon = categoryIcon(item.category)}
                     {@const rule = recurringRules[item.id] ?? null}
@@ -423,7 +423,7 @@
                                     aria-checked={!!rule?.enabled}
                                     aria-label={`Auto-schedule ${item.name} on Cash Flow`}
                                     title={rule?.enabled ? "Auto-scheduled on Cash Flow" : "Turn on recurring schedule"}
-                                    class="relative h-5 w-9 shrink-0 rounded-full transition-colors {rule?.enabled ? 'bg-[var(--stor-action)]' : 'bg-[var(--stor-surface-well)] shadow-[inset_0_0_0_1px_var(--stor-border)]'}"
+                                    class="relative h-5 w-9 shrink-0 rounded-full transition-colors {rule?.enabled ? 'bg-[var(--stor-action)]' : 'bg-[var(--stor-surface-well)] shadow-[inset_0_0_0_1.5px_var(--stor-field-line)]'}"
                                     onclick={() => toggleAutoSchedule(item)}
                                 >
                                     <span class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-[left] {rule?.enabled ? 'left-[18px]' : 'left-0.5'}"></span>
@@ -438,7 +438,7 @@
                                         <DropdownMenu.Content sideOffset={4} align="end" class="stor-menu z-[var(--stor-layer-menu)] min-w-44 overflow-hidden py-1">
                                             <DropdownMenu.Item class={menuItemClass} onSelect={() => (ruleDrawerItem = item)}><IconRepeat class="h-4 w-4" /> Recurring schedule</DropdownMenu.Item>
                                             <DropdownMenu.Item class={menuItemClass} onSelect={() => openItem(type, item)}><IconPencil class="h-4 w-4" /> Edit item</DropdownMenu.Item>
-                                            <DropdownMenu.Separator class="my-1 h-px bg-[var(--stor-border)]" />
+                                            <DropdownMenu.Separator class="h-2" />
                                             <DropdownMenu.Item class={`${menuItemClass} text-[var(--stor-negative)]`} onSelect={() => (pendingDeleteItem = item)}><IconDelete class="h-4 w-4" /> Delete</DropdownMenu.Item>
                                         </DropdownMenu.Content>
                                     </DropdownMenu.Portal>
@@ -496,7 +496,7 @@
                                 <DropdownMenu.Content sideOffset={6} align="end" class="stor-menu z-[var(--stor-layer-menu)] min-w-48 overflow-hidden py-1">
                                     <DropdownMenu.Item class={menuItemClass} onSelect={() => planDrawerMode = "rename"}><IconPencil class="h-4 w-4" /> Rename</DropdownMenu.Item>
                                     <DropdownMenu.Item class={menuItemClass} onSelect={() => planDrawerMode = "duplicate"}><IconContentCopy class="h-4 w-4" /> Duplicate plan</DropdownMenu.Item>
-                                    <DropdownMenu.Separator class="my-1 h-px bg-[var(--stor-border)]" />
+                                    <DropdownMenu.Separator class="h-2" />
                                     <DropdownMenu.Item class={`${menuItemClass} text-[var(--stor-negative)]`} onSelect={() => pendingDeletePlan = true}><IconDelete class="h-4 w-4" /> Delete plan</DropdownMenu.Item>
                                 </DropdownMenu.Content>
                             </DropdownMenu.Portal>
@@ -507,7 +507,7 @@
             </div>
 
             <!-- Mobile Scenario Picker -->
-            <div class="flex h-12 items-center gap-1.5 rounded-2xl border border-[var(--stor-hairline)] bg-[var(--stor-surface)] pl-2 pr-1 md:hidden">
+            <div class="flex h-12 items-center gap-1.5 rounded-2xl bg-[var(--stor-surface)] pl-2 pr-1 md:hidden">
                 <Select class="min-w-0 flex-1" value={selectedPlan.id} options={planOptions} ariaLabel="Selected budget plan" onValueChange={selectPlan} />
                 <CommandOnly>
                     <DropdownMenu.Root>
@@ -516,7 +516,7 @@
                             <DropdownMenu.Content sideOffset={6} align="end" class="stor-menu z-[var(--stor-layer-menu)] min-w-48 overflow-hidden py-1">
                                 <DropdownMenu.Item class={menuItemClass} onSelect={() => planDrawerMode = "create"}><IconPlus class="h-4 w-4" /> New scenario</DropdownMenu.Item>
                                 <DropdownMenu.Item class={menuItemClass} onSelect={() => planDrawerMode = "rename"}><IconPencil class="h-4 w-4" /> Rename</DropdownMenu.Item>
-                                <DropdownMenu.Separator class="my-1 h-px bg-[var(--stor-border)]" />
+                                <DropdownMenu.Separator class="h-2" />
                                 <DropdownMenu.Item class={`${menuItemClass} text-[var(--stor-negative)]`} onSelect={() => pendingDeletePlan = true}><IconDelete class="h-4 w-4" /> Delete plan</DropdownMenu.Item>
                             </DropdownMenu.Content>
                         </DropdownMenu.Portal>
@@ -532,19 +532,19 @@
                         <p class="mt-1 text-xl font-semibold tabular-nums text-[var(--stor-positive)]">{moneyFormatter.format(selectedPlan.income_total)}</p>
                         <p class="mt-0.5 text-[11.5px] text-[var(--stor-faint-text)]">{incomeItems.length} {incomeItems.length === 1 ? "source" : "sources"}</p>
                     </div>
-                    <div class="min-w-0 lg:border-l lg:border-[var(--stor-rule)] lg:pl-6">
+                    <div class="min-w-0 lg:pl-6">
                         <p class="text-xs font-medium text-[var(--stor-muted-text)]">Planned expenses</p>
                         <p class="mt-1 text-xl font-semibold tabular-nums text-[var(--stor-ink)]">{moneyFormatter.format(selectedPlan.expense_total)}</p>
                         <p class="mt-0.5 text-[11.5px] text-[var(--stor-faint-text)]">{expenseItems.length} {expenseItems.length === 1 ? "item" : "items"}</p>
                     </div>
-                    <div class="min-w-0 lg:border-l lg:border-[var(--stor-rule)] lg:pl-6">
+                    <div class="min-w-0 lg:pl-6">
                         <p class="text-xs font-medium text-[var(--stor-muted-text)]">Monthly surplus</p>
                         <p class="mt-1 text-xl font-semibold tabular-nums {remaining >= 0 ? 'text-[var(--stor-positive)]' : 'text-[var(--stor-negative)]'}">
                             {remaining > 0 ? "+" : ""}{moneyFormatter.format(remaining)}
                         </p>
                         <p class="mt-0.5 text-[11.5px] text-[var(--stor-faint-text)]">{savingsRate}% savings rate</p>
                     </div>
-                    <div class="min-w-0 lg:border-l lg:border-[var(--stor-rule)] lg:pl-6">
+                    <div class="min-w-0 lg:pl-6">
                         <p class="text-xs font-medium text-[var(--stor-muted-text)]">Auto-scheduled</p>
                         <p class="mt-1 text-xl font-semibold tabular-nums text-[var(--stor-ink)]">{autoScheduledCount} / {allItems.length}</p>
                         <p class="mt-0.5 text-[11.5px] text-[var(--stor-faint-text)]">Recurring rules → Cash Flow</p>
@@ -616,8 +616,8 @@
         gap: 7px;
         height: 34px;
         padding: 0 13px;
-        border: 1px solid var(--stor-hairline);
         border-radius: 999px;
+        box-shadow: var(--stor-elevation-2);
         background: var(--stor-surface);
         font-size: 13px;
         font-weight: 500;
@@ -685,7 +685,6 @@
         align-items: center;
         gap: 5px;
         padding: 4px 9px;
-        border: 1px solid var(--stor-hairline);
         border-radius: 8px;
         background: var(--stor-surface-muted);
         font-size: 11.5px;

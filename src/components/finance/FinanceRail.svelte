@@ -234,7 +234,6 @@
     }
     .rail-card {
         padding: 14px 16px;
-        border: 1px solid var(--stor-hairline);
         border-radius: var(--stor-section-radius);
         background: var(--stor-surface);
         box-shadow: var(--stor-elevation-1);
@@ -393,7 +392,6 @@
         gap: 6px;
         margin-top: 10px;
         padding-top: 10px;
-        border-top: 1px solid var(--stor-rule);
     }
     .foot-btn {
         display: inline-flex;
@@ -402,8 +400,8 @@
         gap: 4px;
         height: 30px;
         padding: 0 10px;
-        border: 1px solid var(--stor-hairline);
         border-radius: 9px;
+        box-shadow: var(--stor-elevation-2);
         background: var(--stor-surface-raised);
         font-size: 12px;
         font-weight: 600;

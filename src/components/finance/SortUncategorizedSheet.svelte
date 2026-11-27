@@ -169,7 +169,7 @@
     {:else if entries.length === 0}
         <p class="text-sm text-[var(--stor-muted-text)]">{errorMessage || "Everything this month has a category."}</p>
     {:else}
-        <ul class="divide-y divide-[var(--stor-border)]" aria-label="Uncategorized transactions">
+        <ul class="" aria-label="Uncategorized transactions">
             {#each entries as entry (entry.id)}
                 <li class="flex flex-col gap-2 py-3">
                     <div class="flex items-baseline justify-between gap-3">
@@ -185,7 +185,7 @@
             {/each}
         </ul>
         {#if errorMessage}
-            <div class="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{errorMessage}</div>
+            <div class="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{errorMessage}</div>
         {/if}
     {/if}
 

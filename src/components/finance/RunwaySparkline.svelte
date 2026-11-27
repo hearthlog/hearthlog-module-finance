@@ -199,7 +199,6 @@
     .spark-wrap {
         position: relative;
         padding-top: 8px;
-        border-top: 1px solid var(--stor-rule);
     }
     .spark-wrap.compact {
         padding-top: 0;
